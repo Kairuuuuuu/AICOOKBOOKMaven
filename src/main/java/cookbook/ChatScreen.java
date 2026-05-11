@@ -127,28 +127,53 @@ public class ChatScreen {
         sendBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         inputBar.add(sendBtn);
 
+        // --- 🤖 AI INTEGRATION STARTS HERE ---
         ActionListener sendAction = e -> {
             String message = inputField.getText().trim();
             if (!message.isEmpty() && !message.equals("Type a message...")) {
+                
+                // 1. Show the User's message on the screen
                 chatHistoryPanel.add(new ChatBubble(message, true));
                 chatHistoryPanel.add(Box.createRigidArea(new Dimension(0, 15)));
                 inputField.setText("");
+                
+                // 2. Show a temporary "Thinking..." bubble
+                ChatBubble thinkingBubble = new ChatBubble("👨‍🍳 Chef AI is thinking...", false);
+                Component spacing = Box.createRigidArea(new Dimension(0, 15));
+                chatHistoryPanel.add(thinkingBubble);
+                chatHistoryPanel.add(spacing);
                 
                 chatHistoryPanel.revalidate();
                 chatHistoryPanel.repaint();
                 scrollToBottom(scrollPane);
 
-                Timer replyTimer = new Timer(1000, evt -> {
-                    chatHistoryPanel.add(new ChatBubble("I am a UI prototype right now! But soon, I will connect to an API to give you real cooking advice.", false));
-                    chatHistoryPanel.add(Box.createRigidArea(new Dimension(0, 15)));
-                    chatHistoryPanel.revalidate();
-                    chatHistoryPanel.repaint();
-                    scrollToBottom(scrollPane);
-                });
-                replyTimer.setRepeats(false);
-                replyTimer.start();
+                // 3. CRITICAL: Run the AI in a Background Thread!
+                new Thread(() -> {
+                    
+                    // Call the Groq AI class we created earlier!
+                    String aiResponse = AIChatBot.askChefAI(message);
+                    
+                    // 4. Java UI Safety: We must update the screen using invokeLater
+                    SwingUtilities.invokeLater(() -> {
+                        // Remove the temporary "thinking" bubble
+                        chatHistoryPanel.remove(thinkingBubble);
+                        chatHistoryPanel.remove(spacing);
+                        
+                        // Convert \n to <br> so the recipe formats beautifully in your HTML bubble
+                        String formattedResponse = aiResponse.replaceAll("\n", "<br>");
+                        
+                        // Add the real AI response to the screen
+                        chatHistoryPanel.add(new ChatBubble(formattedResponse, false));
+                        chatHistoryPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+                        
+                        chatHistoryPanel.revalidate();
+                        chatHistoryPanel.repaint();
+                        scrollToBottom(scrollPane);
+                    });
+                }).start();
             }
         };
+        // --- 🤖 AI INTEGRATION ENDS HERE ---
 
         sendBtn.addActionListener(sendAction);
         inputField.addActionListener(sendAction);
@@ -188,7 +213,7 @@ public class ChatScreen {
         frame.add(bottomNav);
 
         SwingUtilities.invokeLater(() -> {
-            Timer initialGreeting = new Timer(500, e -> {
+            Timer initialGreeting = new Timer(500, evt -> {
                 chatHistoryPanel.add(new ChatBubble("Welcome back Jowin! 👋 I can help you with recipes, pantry management, or meal planning. What's on your mind today?", false));
                 chatHistoryPanel.add(Box.createRigidArea(new Dimension(0, 15)));
                 chatHistoryPanel.revalidate();

@@ -105,9 +105,7 @@ public class VerificationCodeScreen {
                     SignUpScreen.showScreen(userEmail); 
                 }
             } else {
-                // 🌟 SHOW ERROR INSTEAD OF JOPTIONPANE
                 errorLabel.setVisible(true);
-                // Shake effect or redraw
                 formCard.repaint();
             }
         });
@@ -126,7 +124,6 @@ public class VerificationCodeScreen {
         });
         frame.add(loginText);
         
-        // BACK BUTTON
         JLabel backBtn = new JLabel("← Back");
         backBtn.setFont(new Font("SansSerif", Font.BOLD, 15));
         backBtn.setForeground(darkGreen);

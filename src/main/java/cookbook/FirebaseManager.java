@@ -16,7 +16,7 @@ public class FirebaseManager {
     public static void connect() {
         try {//Github
             FileInputStream serviceAccount = 
-                new FileInputStream("Y:\\Database AI_CookBook\\ai-cookbook-f347b-firebase-adminsdk-fbsvc-526f99b3f7.json");
+                new FileInputStream("ai-cookbook-f347b-firebase-adminsdk-fbsvc-526f99b3f7.json");
 
             FirebaseOptions options = FirebaseOptions.builder()
                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))
