@@ -6,6 +6,7 @@ import java.awt.event.*;
 
 public class SignUpScreen {
 
+    // userEmail is passed from the EnterEmailScreen!
     public static void showScreen(String userEmail) {
         
         FirebaseManager.connect();
@@ -53,55 +54,54 @@ public class SignUpScreen {
         topBar.add(title2);
         frame.add(topBar);
 
-        // FORM CARD 
+        // FORM CARD (Made shorter since we removed a field)
         LoginScreen.RoundPanel formCard = new LoginScreen.RoundPanel();
-        formCard.setBounds(37, 240, 315, 240); 
+        formCard.setBounds(37, 240, 315, 180); 
         formCard.setLayout(null);
 
-        // 1. USERNAME FIELD 
-        LoginScreen.RoundTextField usernameField = new LoginScreen.RoundTextField("Username");
-        usernameField.setBounds(20, 35, 275, 45);
-        usernameField.setForeground(Color.BLACK); 
-        formCard.add(usernameField);
-
-        // 2. PASSWORD FIELD
         LoginScreen.RoundPasswordField passwordField = new LoginScreen.RoundPasswordField("Password");
-        passwordField.setBounds(20, 95, 275, 45);
+        passwordField.setBounds(20, 35, 275, 45);
         passwordField.setForeground(Color.BLACK); 
         formCard.add(passwordField);
 
         JLabel passEye = new JLabel("👁");
-        passEye.setBounds(260, 95, 30, 45);
+        passEye.setBounds(260, 35, 30, 45);
         passEye.setForeground(darkGreen);
         passEye.setCursor(new Cursor(Cursor.HAND_CURSOR));
         formCard.add(passEye);
         formCard.setComponentZOrder(passEye, 0);
 
-        // 3. CONFIRM PASSWORD FIELD
         LoginScreen.RoundPasswordField confirmPasswordField = new LoginScreen.RoundPasswordField("Confirm Password");
-        confirmPasswordField.setBounds(20, 155, 275, 45);
+        confirmPasswordField.setBounds(20, 95, 275, 45);
         confirmPasswordField.setForeground(Color.BLACK); 
         formCard.add(confirmPasswordField);
 
         JLabel confirmEye = new JLabel("👁");
-        confirmEye.setBounds(260, 155, 30, 45);
+        confirmEye.setBounds(260, 95, 30, 45);
         confirmEye.setForeground(darkGreen);
         confirmEye.setCursor(new Cursor(Cursor.HAND_CURSOR));
         formCard.add(confirmEye);
         formCard.setComponentZOrder(confirmEye, 0);
 
-        // 🌟 THE ERROR LABEL 
         JLabel errorLabel = new JLabel("Passwords do not match!", SwingConstants.CENTER);
         errorLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
         errorLabel.setForeground(Color.RED);
-        errorLabel.setBounds(20, 205, 275, 25);
+        errorLabel.setBounds(20, 145, 275, 25);
         errorLabel.setVisible(false); 
         formCard.add(errorLabel);
 
         frame.add(formCard);
+        
+        JPanel loadingOverlay = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
 
-        // 🌟 THE LOADING OVERLAY (GlassPane)
-        JPanel loadingOverlay = new JPanel();
+                g.setColor(getBackground());
+                g.fillRect(0, 0, getWidth(), getHeight());
+                super.paintComponent(g);
+            }
+        };
+        loadingOverlay.setOpaque(false);
         loadingOverlay.setBackground(new Color(0, 0, 0, 180)); 
         loadingOverlay.setLayout(new GridBagLayout()); 
         
@@ -110,25 +110,23 @@ public class SignUpScreen {
         loadingTextLabel.setForeground(Color.WHITE);
         loadingOverlay.add(loadingTextLabel);
         
-        loadingOverlay.addMouseListener(new MouseAdapter() {}); // Block clicks
+        loadingOverlay.addMouseListener(new MouseAdapter() {});
         frame.setGlassPane(loadingOverlay);
 
-        // SIGN UP BUTTON
         LoginScreen.AnimatedButton signUpBtn = new LoginScreen.AnimatedButton("SIGN UP");
-        signUpBtn.setBounds(37, 500, 315, 50);
+        signUpBtn.setBounds(37, 440, 315, 50); 
         signUpBtn.setBackground(darkGreen);
         signUpBtn.setForeground(Color.WHITE);
         signUpBtn.setFont(new Font("SansSerif", Font.BOLD, 16));
         frame.add(signUpBtn);
         
         signUpBtn.addActionListener(e -> {
-            String chosenUsername = usernameField.getText().trim();
             String password = new String(passwordField.getPassword()); 
             String confirmPass = new String(confirmPasswordField.getPassword()); 
 
             // 1. Basic UI checks (No internet needed)
-            if (chosenUsername.isEmpty() || chosenUsername.equals("Username")) {
-                errorLabel.setText("Please choose a username!");
+            if (password.isEmpty() || password.equals("Password")) {
+                errorLabel.setText("Please enter a password!");
                 errorLabel.setVisible(true);
                 return;
             }
@@ -139,39 +137,30 @@ public class SignUpScreen {
                 return; 
             }
 
-            // 2. Hide errors and SHOW THE LOADING SCREEN
             errorLabel.setVisible(false);
             loadingOverlay.setVisible(true); 
 
-            // 🌟 3. START BACKGROUND THREAD FOR FIREBASE
             new Thread(() -> {
-                // Check database for username
-                boolean isTaken = FirebaseManager.isUsernameTaken(chosenUsername);
+                String apiKey = "AIzaSyDCz1o-wE65Wleh6mrz9d-dNKKFrYqfXiw"; 
+                
+                String resultMessage = FirebaseManager.signUpUser(userEmail, password, apiKey);
 
-                if (isTaken) {
-                    // BACK TO UI THREAD: Username is taken
-                    SwingUtilities.invokeLater(() -> {
-                        loadingOverlay.setVisible(false);
-                        errorLabel.setText("Username already exists!"); 
-                        errorLabel.setVisible(true);
-                        formCard.repaint();
-                    });
-                } else {
-                    // SUCCESS: Not taken, let's create the account!
-                    FirebaseManager.signUpUser(userEmail, password, chosenUsername);
-
-                    // BACK TO UI THREAD: Finish up
-                    SwingUtilities.invokeLater(() -> {
-                        loadingOverlay.setVisible(false);
-                        JOptionPane.showMessageDialog(frame, "Welcome, " + chosenUsername + "! Account Created."); 
+                SwingUtilities.invokeLater(() -> {
+                    loadingOverlay.setVisible(false);
+                    
+                    if (resultMessage.equals("SUCCESS")) {
+                        JOptionPane.showMessageDialog(frame, "Account Created Successfully!"); 
                         frame.dispose(); 
                         LoginScreen.showScreen(); 
-                    });
-                }
-            }).start(); // Trigger the thread
+                    } else {
+                        errorLabel.setText(resultMessage); 
+                        errorLabel.setVisible(true);
+                        formCard.repaint();
+                    }
+                });
+            }).start(); 
         });
 
-        // FOOTER
         JLabel loginText = new JLabel("<html>Already have an account? <b>Log in</b></html>", SwingConstants.CENTER);
         loginText.setFont(new Font("SansSerif", Font.PLAIN, 12));
         loginText.setForeground(darkGreen);
@@ -186,7 +175,6 @@ public class SignUpScreen {
         });
         frame.add(loginText);
 
-        // Eye Toggles
         passEye.addMouseListener(new MouseAdapter() {
             boolean isVisible = false;
             public void mousePressed(MouseEvent e) {
