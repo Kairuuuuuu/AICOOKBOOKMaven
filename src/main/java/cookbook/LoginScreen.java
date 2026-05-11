@@ -15,7 +15,6 @@ public class LoginScreen {
         frame.setSize(390, 844); 
         frame.setLocationRelativeTo(null); 
 
-        // 🌟 BULLETPROOF BACKGROUND
         JPanel mainContent = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -54,36 +53,69 @@ public class LoginScreen {
         frame.add(topBar);
 
         RoundPanel formCard = new RoundPanel();
-        formCard.setBounds(37, 280, 300, 160);
+        formCard.setBounds(37, 270, 300, 180);
         formCard.setLayout(null);
 
-        RoundTextField usernameField = new RoundTextField("Username");
-        usernameField.setBounds(20, 20, 260, 40);
-        usernameField.setForeground(Color.BLACK); 
-        formCard.add(usernameField);
+        RoundTextField emailField = new RoundTextField("Email");
+        emailField.setBounds(20, 20, 260, 40);
+        emailField.setForeground(Color.BLACK); 
+        formCard.add(emailField);
 
         RoundPasswordField passwordField = new RoundPasswordField("Password");
         passwordField.setBounds(20, 75, 260, 40);
         passwordField.setForeground(Color.BLACK); 
         formCard.add(passwordField);
+        
+        JLabel passEye = new JLabel("👁");
+        passEye.setBounds(257, 73, 30, 45);
+        passEye.setForeground(darkGreen);
+        passEye.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        formCard.add(passEye);
+        formCard.setComponentZOrder(passEye, 0);
 
-        // --- FORGOT PASSWORD LINK ---
-        JLabel forgotPass = new JLabel("<html><u>Forgot Password?</u></html>"); // Fixed typo!
+        JLabel forgotPass = new JLabel("<html><u>Forgot Password?</u></html>"); 
         forgotPass.setFont(new Font("SansSerif", Font.PLAIN, 10));
         forgotPass.setForeground(darkGreen);
         forgotPass.setBounds(185, 120, 100, 20);
-        forgotPass.setCursor(new Cursor(Cursor.HAND_CURSOR)); // Added the pointer finger!
+        forgotPass.setCursor(new Cursor(Cursor.HAND_CURSOR)); 
         
         forgotPass.addMouseListener(new MouseAdapter() {
             public void mousePressed(MouseEvent e) {
                 frame.dispose();
-                // We pass TRUE because this is the Forgot Password path
                 EnterEmailScreen.showScreen(true); 
             }
         });
-        formCard.add(forgotPass); // Put this inside the formCard!
+        formCard.add(forgotPass); 
+
+        JLabel errorLabel = new JLabel("Invalid Email or Password!", SwingConstants.CENTER);
+        errorLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+        errorLabel.setForeground(Color.RED);
+        errorLabel.setBounds(20, 145, 260, 20);
+        errorLabel.setVisible(false);
+        formCard.add(errorLabel);
 
         frame.add(formCard);
+        
+        JPanel loadingOverlay = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+
+                g.setColor(getBackground());
+                g.fillRect(0, 0, getWidth(), getHeight());
+                super.paintComponent(g);
+            }
+        };
+        loadingOverlay.setOpaque(false); 
+        loadingOverlay.setBackground(new Color(0, 0, 0, 180)); 
+        loadingOverlay.setLayout(new GridBagLayout()); 
+        
+        JLabel loadingTextLabel = new JLabel("<html><div style='text-align: center;'>Logging In...<br><span style='font-size:10px;'>Firing up the stove</span></div></html>");
+        loadingTextLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
+        loadingTextLabel.setForeground(Color.WHITE);
+        loadingOverlay.add(loadingTextLabel);
+        
+        loadingOverlay.addMouseListener(new MouseAdapter() {});
+        frame.setGlassPane(loadingOverlay);
 
         AnimatedButton loginButton = new AnimatedButton("LOGIN");
         loginButton.setBounds(37, 460, 300, 45);
@@ -93,11 +125,38 @@ public class LoginScreen {
         frame.add(loginButton);
         
         loginButton.addActionListener(e -> {
-            frame.dispose(); 
-            MainMenu.showMenu(); 
+            String email = emailField.getText().trim();
+            String password = new String(passwordField.getPassword());
+
+            if (email.isEmpty() || password.isEmpty() || email.equals("Email") || password.equals("Password")) {
+                errorLabel.setText("Please enter email and password!");
+                errorLabel.setVisible(true);
+                return;
+            }
+
+            errorLabel.setVisible(false);
+            loadingOverlay.setVisible(true);
+            new Thread(() -> {
+                String apiKey = "AIzaSyDCz1o-wE65Wleh6mrz9d-dNKKFrYqfXiw"; 
+                
+                String resultMessage = FirebaseManager.loginUser(email, password, apiKey);
+
+                SwingUtilities.invokeLater(() -> {
+                    loadingOverlay.setVisible(false);
+
+                    if (resultMessage.equals("SUCCESS")) {
+                        frame.dispose(); 
+                        MainMenu.showMenu(); 
+                    } else {
+                        
+                        errorLabel.setText(resultMessage);
+                        errorLabel.setVisible(true);
+                        formCard.repaint();
+                    }
+                });
+            }).start();
         });
         
-        // --- SIGN UP LINK ---
         JLabel signUpText = new JLabel("<html>New to Dirk's CookBook? <b>Create an account</b></html>", SwingConstants.CENTER);
         signUpText.setFont(new Font("SansSerif", Font.PLAIN, 12));
         signUpText.setForeground(darkGreen);
@@ -107,16 +166,21 @@ public class LoginScreen {
         signUpText.addMouseListener(new MouseAdapter() {
             public void mousePressed(MouseEvent e) {
                 frame.dispose(); 
-             
                 EnterEmailScreen.showScreen(false); 
             }
         });
         frame.add(signUpText);
-
+        
+        passEye.addMouseListener(new MouseAdapter() {
+            boolean isVisible = false;
+            public void mousePressed(MouseEvent e) {
+                isVisible = !isVisible;
+                passwordField.setEchoChar(isVisible ? (char)0 : '•');
+            }
+        });
         frame.setVisible(true);
     }
 
-    // ... (Keep your RoundPanel, RoundTextField, RoundPasswordField, and AnimatedButton classes exactly as they are down here) ...
     static class RoundPanel extends JPanel {
         public RoundPanel() { setOpaque(false); }
         protected void paintComponent(Graphics g) {
