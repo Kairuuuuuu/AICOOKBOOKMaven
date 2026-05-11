@@ -50,7 +50,6 @@ public class EnterEmailScreen {
 
         frame.add(topBar);
         
-        // FORM CARD 
         LoginScreen.RoundPanel formCard = new LoginScreen.RoundPanel();
         formCard.setBounds(37,280,300,170); 
         formCard.setLayout(null);
@@ -74,7 +73,6 @@ public class EnterEmailScreen {
         EmailField.setForeground(Color.BLACK);
         formCard.add(EmailField);
 
-        // 🌟 THE ERROR LABEL
         JLabel errorLabel = new JLabel("Invalid Email", SwingConstants.CENTER);
         errorLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
         errorLabel.setForeground(Color.RED);
@@ -84,22 +82,29 @@ public class EnterEmailScreen {
         
         frame.add(formCard);
         
-        // 🌟 THE LOADING OVERLAY (Created exactly ONCE here)
-        JPanel loadingOverlay = new JPanel();
-        loadingOverlay.setBackground(new Color(0, 0, 0, 180)); // Dark transparent black
-        loadingOverlay.setLayout(new GridBagLayout()); // Centers everything
+        JPanel loadingOverlay = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+
+                g.setColor(getBackground());
+                g.fillRect(0, 0, getWidth(), getHeight());
+                super.paintComponent(g);
+            }
+        };
+        loadingOverlay.setOpaque(false); 
+        loadingOverlay.setBackground(new Color(0, 0, 0, 180)); 
+        loadingOverlay.setLayout(new GridBagLayout()); 
         
         JLabel loadingTextLabel = new JLabel("<html><div style='text-align: center;'>Sending Code...<br><span style='font-size:10px;'>Please wait</span></div></html>");
         loadingTextLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
         loadingTextLabel.setForeground(Color.WHITE);
         loadingOverlay.add(loadingTextLabel);
         
-        // Add a safety feature to stop clicks while loading
+        
         loadingOverlay.addMouseListener(new MouseAdapter() {}); 
         
         frame.setGlassPane(loadingOverlay);
         
-        // BUTTON LOGIC
         LoginScreen.AnimatedButton nextButton = new LoginScreen.AnimatedButton("NEXT");
         nextButton.setBounds (37, 470, 300, 45); 
         nextButton.setBackground(darkGreen);
@@ -110,7 +115,7 @@ public class EnterEmailScreen {
         nextButton.addActionListener(e -> {
             String email = EmailField.getText();
 
-            // 1. Validate Email
+ 
             if (email.isEmpty() || !email.contains("@")) {
                 errorLabel.setText("Invalid Email");
                 errorLabel.setVisible(true);
@@ -118,17 +123,14 @@ public class EnterEmailScreen {
                 return;
             }
 
-            // 2. Hide errors and SHOW THE LOADING SCREEN
             errorLabel.setVisible(false);
             loadingOverlay.setVisible(true); 
 
-            // 3. START BACKGROUND THREAD
             new Thread(() -> {
                 String sentCode = EmailSender.sendOTP(email);
 
-                // 4. COME BACK TO MAIN UI THREAD
                 SwingUtilities.invokeLater(() -> {
-                    loadingOverlay.setVisible(false); // Hide the loading screen
+                    loadingOverlay.setVisible(false);
 
                     if (sentCode != null) {
                         frame.dispose();
@@ -142,7 +144,6 @@ public class EnterEmailScreen {
             }).start(); 
         });
         
-        // FOOTER
         JLabel loginText = new JLabel("<html>Already have an account? <b>Log in</b></html>", SwingConstants.CENTER);
         loginText.setFont(new Font("SansSerif", Font.PLAIN, 12));
         loginText.setForeground(darkGreen);
