@@ -4,15 +4,20 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
+import java.util.List;
+import java.util.ArrayList;
 
 public class MainMenu {
 
     public static JFrame frame;
     public static JLabel missingLabel; 
+    public static JLabel mealLabel; 
     
-    // 🌟 This variable stores the state so it doesn't reset when leaving the screen!
-    // It will only reset when you completely close and restart the Java program.
-    public static String savedMissingIngredients = "Missing:  Coconut Milk, Thai Chilies";
+    // 🌟 THE MEMORY BANK (Now completely empty by default!)
+    public static String currentRecipeName = "No meal selected";
+    public static List<String> currentIngredients = new ArrayList<>();
+    public static List<Boolean> checkedIngredients = new ArrayList<>();
+    public static String savedMissingIngredients = "Missing: 0 items";
 
     public static void showMenu() {
         frame = new JFrame("Dirk's CookBook - Main Menu");
@@ -20,7 +25,6 @@ public class MainMenu {
         frame.setSize(390, 844); 
         frame.setLocationRelativeTo(null); 
 
-        // 🌟 BULLETPROOF BACKGROUND & FADE
         JPanel mainContent = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -33,7 +37,6 @@ public class MainMenu {
                     }
                 } catch (Exception e) {}
                 
-                // Draw the fade overlay directly over the image
                 g.setColor(new Color(245, 245, 245, 120)); 
                 g.fillRect(0, 0, getWidth(), getHeight());
             }
@@ -137,7 +140,6 @@ public class MainMenu {
 
         frame.add(card2);
 
-        // 🌟 Shopping List Card
         RoundPanel card3 = new RoundPanel();
         card3.setBounds(25, 455, 325, 170); 
         card3.setLayout(null);
@@ -148,13 +150,12 @@ public class MainMenu {
         shopTitle.setBounds(15, 15, 200, 25);
         card3.add(shopTitle);
 
-        JLabel mealLabel = new JLabel("Selected Meal: Thai Green Curry");
+        mealLabel = new JLabel("Selected Meal: " + currentRecipeName);
         mealLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         mealLabel.setForeground(Color.BLACK);
         mealLabel.setBounds(15, 50, 300, 20);
         card3.add(mealLabel);
 
-        // 🌟 LOAD THE SAVED STATE: We use savedMissingIngredients here!
         missingLabel = new JLabel(savedMissingIngredients);
         missingLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         missingLabel.setForeground(Color.BLACK);
@@ -169,7 +170,9 @@ public class MainMenu {
 
         AnimatedButton viewListBtn = new AnimatedButton("View Full List", false);
         viewListBtn.setBounds(20, 130, 285, 30);
-        viewListBtn.addActionListener(e -> ShoppingList.showShoppingList(frame));
+        viewListBtn.addActionListener(e -> {
+            ShoppingList.showShoppingList(frame, currentRecipeName, currentIngredients, checkedIngredients);
+        });
         card3.add(viewListBtn);
 
         frame.add(card3);
@@ -183,7 +186,6 @@ public class MainMenu {
         homeTab.setBounds(45, 10, 60, 60);
         bottomNav.add(homeTab);
 
-        // 🌟 Reverted to original navigation style
         NavItem pantryTab = new NavItem("📋", "My Pantry", false); 
         pantryTab.setBounds(165, 10, 60, 60);
         pantryTab.addMouseListener(new MouseAdapter() {
@@ -196,7 +198,6 @@ public class MainMenu {
         });
         bottomNav.add(pantryTab);
 
-        // 🌟 Reverted to original navigation style
         NavItem chatTab = new NavItem("💬", "AI Chat", false);
         chatTab.setBounds(280, 10, 60, 60);
         chatTab.addMouseListener(new MouseAdapter() {
@@ -226,17 +227,14 @@ public class MainMenu {
     public static class RoundTextField extends JTextField {
         private String placeholder;
         public RoundTextField(String placeholder) { 
-            this.placeholder = placeholder; 
-            setOpaque(false); 
-            setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10)); 
+            this.placeholder = placeholder; setOpaque(false); setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10)); 
             addFocusListener(new FocusAdapter() {
                 public void focusGained(FocusEvent e) { if (getText().equals(placeholder)) { setText(""); setForeground(Color.BLACK); } }
                 public void focusLost(FocusEvent e) { if (getText().isEmpty()) { setForeground(Color.GRAY); setText(placeholder); } }
             });
         }
         protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g; 
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g.setColor(Color.WHITE); g.fillRoundRect(0, 0, getWidth()-1, getHeight()-1, 15, 15);
             g.setColor(new Color(14, 71, 17)); g.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, 15, 15);
             super.paintComponent(g);
@@ -251,8 +249,7 @@ public class MainMenu {
     public static class AnimatedButton extends JButton {
         int shrink = 0; boolean isSolid;
         public AnimatedButton(String text, boolean isSolid) {
-            super(text); this.isSolid = isSolid;
-            setContentAreaFilled(false); setBorderPainted(false); setFocusPainted(false);
+            super(text); this.isSolid = isSolid; setContentAreaFilled(false); setBorderPainted(false); setFocusPainted(false);
             if(isSolid) setForeground(Color.WHITE); else setForeground(new Color(14, 71, 17));
             setFont(new Font("SansSerif", Font.BOLD, 14));
             addMouseListener(new MouseAdapter() {
@@ -261,8 +258,7 @@ public class MainMenu {
             });
         }
         protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g;
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             if (shrink > 0) g2.translate(shrink, shrink);
             if (isSolid) { g.setColor(new Color(14, 71, 17)); g.fillRoundRect(0, 0, getWidth()-1-(shrink*2), getHeight()-1-(shrink*2), 30, 30); } 
             else { g.setColor(Color.WHITE); g.fillRoundRect(0, 0, getWidth()-1-(shrink*2), getHeight()-1-(shrink*2), 30, 30); g.setColor(new Color(14, 71, 17)); g.drawRoundRect(0, 0, getWidth()-1-(shrink*2), getHeight()-1-(shrink*2), 30, 30); }
@@ -273,26 +269,12 @@ public class MainMenu {
 
     static class RoundImagePanel extends JPanel {
         Image image;
-        public RoundImagePanel(String imagePath) {
-            setOpaque(false);
-            try { 
-                ImageIcon icon = new ImageIcon(imagePath);
-                if (icon.getIconWidth() != -1) image = icon.getImage();
-            } catch (Exception e) {}
-        }
+        public RoundImagePanel(String imagePath) { setOpaque(false); try { ImageIcon icon = new ImageIcon(imagePath); if (icon.getIconWidth() != -1) image = icon.getImage(); } catch (Exception e) {} }
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setColor(Color.LIGHT_GRAY); g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
-            if (image != null) {
-                Shape oldClip = g2.getClip();
-                g2.setClip(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
-                g2.drawImage(image, 0, 0, getWidth(), getHeight(), this);
-                g2.setClip(oldClip);
-            } else {
-                g2.setColor(Color.DARK_GRAY);
-                g2.setFont(new Font("SansSerif", Font.PLAIN, 24));
-                g2.drawString("📷", getWidth()/2 - 12, getHeight()/2 + 8);
-            }
+            if (image != null) { Shape oldClip = g2.getClip(); g2.setClip(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15)); g2.drawImage(image, 0, 0, getWidth(), getHeight(), this); g2.setClip(oldClip); } 
+            else { g2.setColor(Color.DARK_GRAY); g2.setFont(new Font("SansSerif", Font.PLAIN, 24)); g2.drawString("📷", getWidth()/2 - 12, getHeight()/2 + 8); }
         }
     }
 
@@ -310,12 +292,10 @@ public class MainMenu {
         public NavItem(String iconText, String titleText, boolean isActive) {
             this.isActive = isActive; setOpaque(false); setLayout(null);
             JLabel icon = new JLabel(iconText, SwingConstants.CENTER); icon.setFont(new Font("SansSerif", Font.PLAIN, 24)); icon.setForeground(Color.WHITE); icon.setBounds(0, 8, 60, 30); add(icon);
-            JLabel title = new JLabel(titleText, SwingConstants.CENTER); title.setFont(new Font("SansSerif", Font.PLAIN, 10)); title.setForeground(Color.WHITE); title.setBounds(0, 38, 60, 15); add(title);
-            setCursor(new Cursor(Cursor.HAND_CURSOR));
+            JLabel title = new JLabel(titleText, SwingConstants.CENTER); title.setFont(new Font("SansSerif", Font.PLAIN, 10)); title.setForeground(Color.WHITE); title.setBounds(0, 38, 60, 15); add(title); setCursor(new Cursor(Cursor.HAND_CURSOR));
         }
         protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            if (isActive) { Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON); g2.setColor(new Color(255, 255, 255, 60)); g2.fillOval(3, 3, 54, 54); }
+            super.paintComponent(g); if (isActive) { Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON); g2.setColor(new Color(255, 255, 255, 60)); g2.fillOval(3, 3, 54, 54); }
         }
     }
 }

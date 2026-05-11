@@ -8,6 +8,9 @@ import java.awt.event.*;
 public class ChatScreen {
 
     public static JFrame frame;
+    
+    // 🌟 THE UI MEMORY BANK: This permanently holds your chat bubbles so they never get destroyed!
+    public static JPanel chatHistoryPanel;
 
     public static void showChat() {
         frame = new JFrame("Dirk's CookBook - AI Chat");
@@ -15,7 +18,6 @@ public class ChatScreen {
         frame.setSize(390, 844);
         frame.setLocationRelativeTo(null);
 
-        // 🌟 BULLETPROOF BACKGROUND
         JPanel mainContent = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -73,10 +75,15 @@ public class ChatScreen {
 
         frame.add(topBar);
 
-        JPanel chatHistoryPanel = new JPanel();
-        chatHistoryPanel.setLayout(new BoxLayout(chatHistoryPanel, BoxLayout.Y_AXIS));
-        chatHistoryPanel.setOpaque(false);
-        chatHistoryPanel.setBorder(new EmptyBorder(15, 0, 15, 0)); 
+        // 🌟 CHECKING THE MEMORY BANK: Only build the panel if it's the very first time opening the app
+        boolean isFirstLoad = (chatHistoryPanel == null);
+        
+        if (isFirstLoad) {
+            chatHistoryPanel = new JPanel();
+            chatHistoryPanel.setLayout(new BoxLayout(chatHistoryPanel, BoxLayout.Y_AXIS));
+            chatHistoryPanel.setOpaque(false);
+            chatHistoryPanel.setBorder(new EmptyBorder(15, 0, 15, 0)); 
+        }
 
         JScrollPane scrollPane = new JScrollPane(chatHistoryPanel);
         scrollPane.setBounds(0, 100, 390, 560); 
@@ -104,16 +111,10 @@ public class ChatScreen {
         
         inputField.addFocusListener(new FocusAdapter() {
             public void focusGained(FocusEvent e) {
-                if (inputField.getText().equals(" Type a message...")) {
-                    inputField.setText("");
-                    inputField.setForeground(Color.BLACK);
-                }
+                if (inputField.getText().equals(" Type a message...")) { inputField.setText(""); inputField.setForeground(Color.BLACK); }
             }
             public void focusLost(FocusEvent e) {
-                if (inputField.getText().isEmpty()) {
-                    inputField.setForeground(Color.GRAY);
-                    inputField.setText(" Type a message...");
-                }
+                if (inputField.getText().isEmpty()) { inputField.setForeground(Color.GRAY); inputField.setText(" Type a message..."); }
             }
         });
         inputBar.add(inputField);
@@ -130,23 +131,66 @@ public class ChatScreen {
         ActionListener sendAction = e -> {
             String message = inputField.getText().trim();
             if (!message.isEmpty() && !message.equals("Type a message...")) {
+                
                 chatHistoryPanel.add(new ChatBubble(message, true));
                 chatHistoryPanel.add(Box.createRigidArea(new Dimension(0, 15)));
                 inputField.setText("");
+                
+                ChatBubble thinkingBubble = new ChatBubble("👨‍🍳 Chef AI is thinking...", false);
+                Component spacing = Box.createRigidArea(new Dimension(0, 15));
+                chatHistoryPanel.add(thinkingBubble);
+                chatHistoryPanel.add(spacing);
                 
                 chatHistoryPanel.revalidate();
                 chatHistoryPanel.repaint();
                 scrollToBottom(scrollPane);
 
-                Timer replyTimer = new Timer(1000, evt -> {
-                    chatHistoryPanel.add(new ChatBubble("I am a UI prototype right now! But soon, I will connect to an API to give you real cooking advice.", false));
-                    chatHistoryPanel.add(Box.createRigidArea(new Dimension(0, 15)));
-                    chatHistoryPanel.revalidate();
-                    chatHistoryPanel.repaint();
-                    scrollToBottom(scrollPane);
-                });
-                replyTimer.setRepeats(false);
-                replyTimer.start();
+                new Thread(() -> {
+                    AIChatBot.ParsedResponse aiResponse = AIChatBot.askChefAI(message);
+                    
+                    SwingUtilities.invokeLater(() -> {
+                        chatHistoryPanel.remove(thinkingBubble);
+                        chatHistoryPanel.remove(spacing);
+                        
+                        String formattedResponse = aiResponse.displayMessage.replaceAll("\n", "<br>");
+                        chatHistoryPanel.add(new ChatBubble(formattedResponse, false));
+                        
+                        if (aiResponse.hasRecipe) {
+                            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
+                            buttonPanel.setOpaque(false);
+                            
+                            JButton addToListBtn = new JButton("🛒 Add Ingredients to Shopping List");
+                            addToListBtn.setBackground(darkGreen);
+                            addToListBtn.setForeground(Color.WHITE);
+                            addToListBtn.setFocusPainted(false);
+                            addToListBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                            
+                            addToListBtn.addActionListener(evt -> {
+                                MainMenu.currentRecipeName = aiResponse.recipeName;
+                                MainMenu.currentIngredients = aiResponse.ingredients;
+                                
+                                MainMenu.checkedIngredients = new java.util.ArrayList<>();
+                                for(int i = 0; i < aiResponse.ingredients.size(); i++) {
+                                    MainMenu.checkedIngredients.add(false); 
+                                }
+                                
+                                MainMenu.savedMissingIngredients = "Missing: " + aiResponse.ingredients.size() + " items";
+                                
+                                // 🌟 Use ChatScreen.frame to ensure the dialog connects to the active window!
+                                ShoppingList.showShoppingList(ChatScreen.frame, MainMenu.currentRecipeName, MainMenu.currentIngredients, MainMenu.checkedIngredients);
+                            });
+                            
+                            buttonPanel.add(addToListBtn);
+                            chatHistoryPanel.add(Box.createRigidArea(new Dimension(0, 5))); 
+                            chatHistoryPanel.add(buttonPanel);
+                        }
+                        
+                        chatHistoryPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+                        chatHistoryPanel.revalidate();
+                        chatHistoryPanel.repaint();
+                        scrollToBottom(scrollPane);
+                    });
+                }).start();
             }
         };
 
@@ -163,21 +207,14 @@ public class ChatScreen {
         MainMenu.NavItem homeTab = new MainMenu.NavItem("🏠", "Home", false);  
         homeTab.setBounds(45, 10, 60, 60);
         homeTab.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent e) {
-                Point loc = frame.getLocation(); frame.dispose(); 
-                MainMenu.showMenu(); 
-                for(Window w : Window.getWindows()) if (w instanceof JFrame && w.isVisible()) w.setLocation(loc);
-            }
+            public void mousePressed(MouseEvent e) { Point loc = frame.getLocation(); frame.dispose(); MainMenu.showMenu(); for(Window w : Window.getWindows()) if (w instanceof JFrame && w.isVisible()) w.setLocation(loc); }
         });
         bottomNav.add(homeTab);
 
         MainMenu.NavItem pantryTab = new MainMenu.NavItem("📋", "My Pantry", false); 
         pantryTab.setBounds(165, 10, 60, 60);
         pantryTab.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent e) {
-                Point loc = frame.getLocation(); frame.dispose(); 
-                PantryScreen.showPantry(); PantryScreen.frame.setLocation(loc); 
-            }
+            public void mousePressed(MouseEvent e) { Point loc = frame.getLocation(); frame.dispose(); PantryScreen.showPantry(); PantryScreen.frame.setLocation(loc); }
         });
         bottomNav.add(pantryTab);
 
@@ -187,18 +224,27 @@ public class ChatScreen {
 
         frame.add(bottomNav);
 
-        SwingUtilities.invokeLater(() -> {
-            Timer initialGreeting = new Timer(500, e -> {
-                chatHistoryPanel.add(new ChatBubble("Welcome back Jowin! 👋 I can help you with recipes, pantry management, or meal planning. What's on your mind today?", false));
-                chatHistoryPanel.add(Box.createRigidArea(new Dimension(0, 15)));
-                chatHistoryPanel.revalidate();
-                chatHistoryPanel.repaint();
+        // 🌟 ONLY DO THE GREETING IF IT'S A FRESH START
+        if (isFirstLoad) {
+            SwingUtilities.invokeLater(() -> {
+                Timer initialGreeting = new Timer(500, evt -> {
+                    chatHistoryPanel.add(new ChatBubble("Welcome back Kyle! 👋 I can help you with recipes, pantry management, or meal planning. What's on your mind today?", false));
+                    chatHistoryPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+                    chatHistoryPanel.revalidate();
+                    chatHistoryPanel.repaint();
+                    scrollToBottom(scrollPane);
+                    inputField.requestFocusInWindow();
+                });
+                initialGreeting.setRepeats(false);
+                initialGreeting.start();
+            });
+        } else {
+            // If the chat already has history, just auto-scroll to the bottom instantly
+            SwingUtilities.invokeLater(() -> {
                 scrollToBottom(scrollPane);
                 inputField.requestFocusInWindow();
             });
-            initialGreeting.setRepeats(false);
-            initialGreeting.start();
-        });
+        }
 
         frame.setVisible(true);
     }

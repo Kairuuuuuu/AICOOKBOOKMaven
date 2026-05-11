@@ -141,7 +141,7 @@ public class SignUpScreen {
             loadingOverlay.setVisible(true); 
 
             new Thread(() -> {
-                String apiKey = "AIzaSyDCz1o-wE65Wleh6mrz9d-dNKKFrYqfXiw"; 
+                String apiKey = System.getenv("FIREBASE_API_KEY"); 
                 
                 String resultMessage = FirebaseManager.signUpUser(userEmail, password, apiKey);
 
