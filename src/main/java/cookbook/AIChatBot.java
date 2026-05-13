@@ -17,7 +17,6 @@ public class AIChatBot {
     public static class ParsedResponse {
         public String displayMessage;
         public String recipeName; 
-        public String imagePath; // <-- NEW: Stores the generated image filename
         public List<String> ingredients;
         public boolean hasRecipe;
     }
@@ -27,7 +26,6 @@ public class AIChatBot {
         result.ingredients = new ArrayList<>();
         result.hasRecipe = false;
         result.recipeName = "AI Suggested Recipe"; 
-        result.imagePath = "default_food.jpg"; // Default fallback
 
         try {
             HttpClient client = HttpClient.newHttpClient();
@@ -75,11 +73,6 @@ public class AIChatBot {
             for (String line : lines) {
                 if (line.toUpperCase().contains("RECIPE_NAME:")) {
                     result.recipeName = line.substring(line.toUpperCase().indexOf("RECIPE_NAME:") + 12).replace("*", "").trim();
-                    
-                    // --- NEW: Generate a filename based on the recipe name ---
-                    // Example: "Filipino-Style Lechon" -> "filipino_style_lechon.jpg"
-                    result.imagePath = result.recipeName.toLowerCase().replaceAll("[^a-z0-9]", "_") + ".jpg";
-                    
                     rawText = rawText.replace(line, "🍽️ **Recipe:** " + result.recipeName);
                     break;
                 }

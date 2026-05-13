@@ -50,42 +50,37 @@ public class VerificationCodeScreen {
         topBar.add(title2);
         frame.add(topBar);
         
-        // FORM CARD (Slightly taller to fit the new text)
+        // FORM CARD
         LoginScreen.RoundPanel formCard = new LoginScreen.RoundPanel();
         formCard.setBounds(37, 280, 315, 215); 
         formCard.setLayout(null);
         
-        // Main Header
         JLabel header = new JLabel("<html>Enter the<br>Verification Code</html>", SwingConstants.LEFT);
         header.setFont(new Font("Reddit Sans", Font.BOLD, 24));
         header.setForeground(darkGreen);
         header.setBounds(20, 15, 280, 65);
         formCard.add(header);
         
-        // Sub-Header (The "pls check email" text)
         JLabel subHeader = new JLabel("<html>We have sent a verification code<br>in your email account please check</html>");
         subHeader.setFont(new Font("Reddit Sans", Font.BOLD, 12));
         subHeader.setForeground(darkGreen);
         subHeader.setBounds(20, 85, 280, 30);
         formCard.add(subHeader);
         
-        // Text Field
         LoginScreen.RoundTextField verificationField = new LoginScreen.RoundTextField("Enter Code");
         verificationField.setBounds(20, 125, 275, 45);
         verificationField.setForeground(Color.BLACK);
         formCard.add(verificationField);
         
-        // 🌟 THE ERROR LABEL (Hidden by default)
         JLabel errorLabel = new JLabel("Invalid Code", SwingConstants.CENTER);
         errorLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
         errorLabel.setForeground(Color.RED);
         errorLabel.setBounds(20, 175, 275, 20);
-        errorLabel.setVisible(false); // Make it invisible at start
+        errorLabel.setVisible(false); 
         formCard.add(errorLabel);
         
         frame.add(formCard); 
         
-        // NEXT BUTTON
         LoginScreen.AnimatedButton nextButton = new LoginScreen.AnimatedButton("NEXT");
         nextButton.setBounds(37, 510, 315, 50);
         nextButton.setBackground(darkGreen);
@@ -93,14 +88,14 @@ public class VerificationCodeScreen {
         nextButton.setFont(new Font("SansSerif", Font.BOLD, 16));
         frame.add(nextButton);
         
-        // LOGIC
         nextButton.addActionListener(e -> {
             String typedCode = verificationField.getText();
 
             if (typedCode.equals(correctOTP)) {
                 frame.dispose();
                 if (isForgotPassword) {
-                    ForgotPasswordScreen.showScreen();
+                    // 🌟 CRITICAL FIX: Pass the email so the next screen knows whose account to update!
+                    ForgotPasswordScreen.showScreen(userEmail); 
                 } else {
                     SignUpScreen.showScreen(userEmail); 
                 }
@@ -110,7 +105,6 @@ public class VerificationCodeScreen {
             }
         });
 
-        // FOOTER
         JLabel loginText = new JLabel("<html>Already have an account? <b>Log in</b></html>", SwingConstants.CENTER);
         loginText.setFont(new Font("SansSerif", Font.PLAIN, 12));
         loginText.setForeground(darkGreen);

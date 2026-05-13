@@ -57,7 +57,9 @@ public class AddBudget {
         budgetLabel.setBounds(20, 105, 100, 30);
         popupPanel.add(budgetLabel);
 
-        MainMenu.RoundTextField budgetField = new MainMenu.RoundTextField("Enter Budget");
+        // Fill field with existing budget if it's already set
+        String currentText = MainMenu.currentBudget.equals("Php 0.00") ? "Enter Budget" : MainMenu.currentBudget.replace("Php ", "");
+        MainMenu.RoundTextField budgetField = new MainMenu.RoundTextField(currentText);
         budgetField.setBounds(120, 105, 150, 35);
         popupPanel.add(budgetField);
 
@@ -68,11 +70,65 @@ public class AddBudget {
 
         MainMenu.AnimatedButton saveBtn = new MainMenu.AnimatedButton("Save", true);
         saveBtn.setBounds(150, 160, 120, 35);
+        
+        // 🌟 UPDATED: Saves to Memory Bank and shows the transparent Toast!
         saveBtn.addActionListener(e -> {
+            String newBudget = budgetField.getText().trim();
+            
+            // Only update if they typed something valid
+            if (!newBudget.isEmpty() && !newBudget.equals("Enter Budget")) {
+                
+                // Add "Php" automatically if they forgot to type it
+                if (!newBudget.toLowerCase().startsWith("php")) {
+                    MainMenu.currentBudget = "Php " + newBudget;
+                } else {
+                    MainMenu.currentBudget = newBudget;
+                }
+                
+                // Instantly update the Shopping List Dashboard label
+                if (MainMenu.budgetLabel != null) {
+                    MainMenu.budgetLabel.setText("Budget: " + MainMenu.currentBudget);
+                }
+            }
+            
             dialog.dispose();
+            showSuccessToast(parentFrame);
         });
+        
         popupPanel.add(saveBtn);
 
         dialog.setVisible(true);
+    }
+
+    // 🌟 THE TRANSPARENT POPUP LOGIC
+    private static void showSuccessToast(JFrame parentFrame) {
+        JDialog successDialog = new JDialog(parentFrame, false);
+        successDialog.setUndecorated(true);
+        successDialog.setBackground(new Color(0, 0, 0, 0));
+        successDialog.setSize(260, 50);
+        successDialog.setLocationRelativeTo(parentFrame);
+        
+        JPanel toastPanel = new JPanel(new BorderLayout()) {
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(14, 71, 17, 230)); // Transparent Dark Green
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
+            }
+        };
+        toastPanel.setOpaque(false);
+        
+        JLabel toastLabel = new JLabel("✓ Budget successfully updated!", SwingConstants.CENTER);
+        toastLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+        toastLabel.setForeground(Color.WHITE);
+        toastPanel.add(toastLabel, BorderLayout.CENTER);
+        
+        successDialog.setContentPane(toastPanel);
+        successDialog.setVisible(true);
+
+        // Fades out automatically after 2 seconds
+        Timer fadeTimer = new Timer(2000, fadeEvt -> successDialog.dispose());
+        fadeTimer.setRepeats(false);
+        fadeTimer.start();
     }
 }

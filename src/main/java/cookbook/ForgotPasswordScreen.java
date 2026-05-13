@@ -6,13 +6,13 @@ import java.awt.event.*;
 
 public class ForgotPasswordScreen {
 	
-	public static void showScreen() {
+    // 🌟 UPDATED: Now receives the email from the OTP screen
+	public static void showScreen(String userEmail) {
 		JFrame frame = new JFrame("Dirk's CookBook");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(390, 844); 
         frame.setLocationRelativeTo(null); 
 
-        // 🌟 BULLETPROOF BACKGROUND
         JPanel mainContent = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -90,6 +90,14 @@ public class ForgotPasswordScreen {
         formCard.add(confirmEye);
         formCard.setComponentZOrder(confirmEye, 0); 
         
+        // 🌟 NEW: Error label to show mismatch or weak passwords
+        JLabel errorLabel = new JLabel("", SwingConstants.CENTER);
+        errorLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+        errorLabel.setForeground(Color.RED);
+        errorLabel.setBounds(20, 185, 260, 20); 
+        errorLabel.setVisible(false);
+        formCard.add(errorLabel);
+        
         frame.add(formCard); 
         
         LoginScreen.AnimatedButton confirmPass = new LoginScreen.AnimatedButton("CONFIRM NEW PASSWORD");
@@ -99,10 +107,48 @@ public class ForgotPasswordScreen {
         confirmPass.setFont(new Font("SansSerif", Font.BOLD, 14));
         frame.add(confirmPass); 
         
+        // 🌟 UPDATED: Triggers the Firebase password change logic
         confirmPass.addActionListener(e -> {
-        	frame.dispose();
-            JOptionPane.showMessageDialog(frame, "Password Successfully Changed!");
-        	LoginScreen.main(new String [0]);
+            String newPass = new String(newPassField.getPassword());
+            String confirmPassStr = new String(confirmPasswordField.getPassword());
+
+            // Check if fields are empty
+            if (newPass.isEmpty() || confirmPassStr.isEmpty() || newPass.equals("New Password")) {
+                errorLabel.setText("Please enter a new password!");
+                errorLabel.setVisible(true);
+                return;
+            }
+
+            // Check if passwords match
+            if (!newPass.equals(confirmPassStr)) {
+                errorLabel.setText("Passwords do not match!");
+                errorLabel.setVisible(true);
+                return;
+            }
+            
+            errorLabel.setVisible(false);
+            confirmPass.setText("UPDATING...");
+            confirmPass.setEnabled(false);
+
+            // Connects to Firebase
+            new Thread(() -> {
+                String resultMessage = FirebaseManager.changePassword(userEmail, newPass);
+
+                SwingUtilities.invokeLater(() -> {
+                    confirmPass.setText("CONFIRM NEW PASSWORD");
+                    confirmPass.setEnabled(true);
+
+                    if (resultMessage.equals("SUCCESS")) {
+                        frame.dispose();
+                        JOptionPane.showMessageDialog(null, "Password Successfully Changed!");
+                        LoginScreen.main(new String [0]);
+                    } else {
+                        errorLabel.setText(resultMessage);
+                        errorLabel.setVisible(true);
+                        formCard.repaint();
+                    }
+                });
+            }).start();
         });
         
         passEye.addMouseListener(new MouseAdapter() {

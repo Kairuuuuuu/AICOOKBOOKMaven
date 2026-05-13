@@ -3,8 +3,20 @@ package cookbook;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PantryScreen {
+
+    public static class PantryItem {
+        String name;
+        String qty;
+        public PantryItem(String name, String qty) {
+            this.name = name;
+            this.qty = qty;
+        }
+    }
+    public static List<PantryItem> savedPantryItems = new ArrayList<>();
 
     static int itemCount = 0; 
     static JPanel pantryGrid; 
@@ -89,6 +101,11 @@ public class PantryScreen {
         pantryGrid.setLayout(null); 
         pantryGrid.setPreferredSize(new Dimension(390, 545)); 
         
+        itemCount = 0;
+        for (PantryItem item : savedPantryItems) {
+            addItemToGrid(item.name, item.qty);
+        }
+        
         JScrollPane pantryScroll = new JScrollPane(pantryGrid);
         pantryScroll.setBounds(0, 175, 390, 545);
         pantryScroll.setOpaque(false);
@@ -151,7 +168,9 @@ public class PantryScreen {
         JDialog dialog = new JDialog(frame, true);
         dialog.setUndecorated(true); 
         dialog.setBackground(new Color(0, 0, 0, 0)); 
-        dialog.setSize(300, 470);
+        
+        // 🌟 UPDATED: Dialog is smaller now because we removed the image box
+        dialog.setSize(300, 330);
         dialog.setLocationRelativeTo(frame); 
 
         MainMenu.RoundPanel popupPanel = new MainMenu.RoundPanel();
@@ -168,51 +187,34 @@ public class PantryScreen {
         title.setBounds(0, 20, 300, 25);
         popupPanel.add(title);
 
-        JPanel imageBox = new JPanel() {
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g.setColor(new Color(230, 230, 230));
-                g.fillRoundRect(0, 0, getWidth()-1, getHeight()-1, 15, 15);
-                g.setColor(Color.GRAY);
-                g.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, 15, 15);
-            }
-        };
-        imageBox.setOpaque(false);
-        imageBox.setBounds(25, 55, 250, 120);
-        imageBox.setLayout(new BorderLayout());
-        JLabel imgText = new JLabel("<html><div style='text-align:center;'>📷<br>Insert Image</div></html>", SwingConstants.CENTER);
-        imgText.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        imageBox.add(imgText, BorderLayout.CENTER);
-        popupPanel.add(imageBox);
-
+        // 🌟 UPDATED: Shifted all text fields up to fill the gap left by the image box
         JLabel nameLabel = new JLabel("Item Name");
-        nameLabel.setBounds(25, 185, 250, 15);
+        nameLabel.setBounds(25, 55, 250, 15);
         popupPanel.add(nameLabel);
         MainMenu.RoundTextField nameField = new MainMenu.RoundTextField("Enter Item Name...");
-        nameField.setBounds(25, 200, 250, 35);
+        nameField.setBounds(25, 70, 250, 35);
         popupPanel.add(nameField);
 
         JLabel qtyLabel = new JLabel("Quantity");
-        qtyLabel.setBounds(25, 245, 250, 15);
+        qtyLabel.setBounds(25, 115, 250, 15);
         popupPanel.add(qtyLabel);
         MainMenu.RoundTextField qtyField = new MainMenu.RoundTextField("Enter Quantity...");
-        qtyField.setBounds(25, 260, 250, 35);
+        qtyField.setBounds(25, 130, 250, 35);
         popupPanel.add(qtyField);
 
         JLabel expLabel = new JLabel("Expiry Date");
-        expLabel.setBounds(25, 305, 250, 15);
+        expLabel.setBounds(25, 175, 250, 15);
         popupPanel.add(expLabel);
         MainMenu.RoundTextField expField = new MainMenu.RoundTextField("MM/DD/YYYY   📅");
-        expField.setBounds(25, 320, 250, 35);
+        expField.setBounds(25, 190, 250, 35);
         popupPanel.add(expField);
 
         MainMenu.AnimatedButton cancelBtn = new MainMenu.AnimatedButton("Cancel", false);
-        cancelBtn.setBounds(25, 390, 115, 35);
+        cancelBtn.setBounds(25, 260, 115, 35);
         popupPanel.add(cancelBtn);
 
         MainMenu.AnimatedButton addBtn = new MainMenu.AnimatedButton("Add to Pantry", true);
-        addBtn.setBounds(150, 390, 125, 35);
+        addBtn.setBounds(150, 260, 125, 35);
         popupPanel.add(addBtn);
 
         cancelBtn.addActionListener(e -> {
@@ -223,6 +225,8 @@ public class PantryScreen {
         addBtn.addActionListener(e -> {
             String newName = nameField.getText().isEmpty() || nameField.getText().equals("Enter Item Name...") ? "New Food" : nameField.getText();
             String newQty = qtyField.getText().isEmpty() || qtyField.getText().equals("Enter Quantity...") ? "Quantity: ?" : "Quantity: " + qtyField.getText();
+            
+            savedPantryItems.add(new PantryItem(newName, newQty));
             
             addItemToGrid(newName, newQty);
             frame.getGlassPane().setVisible(false);
@@ -236,7 +240,8 @@ public class PantryScreen {
         int xPos = 25 + (itemCount % 2) * 170; 
         int yPos = 0 + (itemCount / 2) * 170;  
 
-        PantryCard newCard = new PantryCard("default_food.jpg", name, qty, "Fresh", new Color(40, 167, 69));
+        // 🌟 UPDATED: Removed the image string argument completely
+        PantryCard newCard = new PantryCard(name, qty, "Fresh", new Color(40, 167, 69));
         newCard.setBounds(xPos, yPos, 155, 155);
         
         pantryGrid.add(newCard);
@@ -250,21 +255,50 @@ public class PantryScreen {
         pantryGrid.repaint();    
     }
 
+    // 🌟 THE FIX: Completely removed the image panel and re-centered the text!
     static class PantryCard extends JPanel {
         Color statusColor;
-        public PantryCard(String imgPath, String title, String qty, String status, Color statusColor) {
-            this.statusColor = statusColor; setLayout(null); setOpaque(false);
-            MainMenu.RoundImagePanel img = new MainMenu.RoundImagePanel(imgPath);
-            img.setBounds(0, 0, 155, 95); add(img);
-            JLabel tLabel = new JLabel(title); tLabel.setFont(new Font("SansSerif", Font.PLAIN, 14)); tLabel.setBounds(10, 100, 135, 20); add(tLabel);
-            JLabel qLabel = new JLabel(qty); qLabel.setFont(new Font("SansSerif", Font.PLAIN, 10)); qLabel.setForeground(Color.DARK_GRAY); qLabel.setBounds(10, 118, 135, 15); add(qLabel);
-            JLabel sLabel = new JLabel(status); sLabel.setFont(new Font("SansSerif", Font.PLAIN, 10)); sLabel.setForeground(statusColor); sLabel.setBounds(22, 133, 120, 15); add(sLabel);
+        
+        public PantryCard(String title, String qty, String status, Color statusColor) {
+            this.statusColor = statusColor; 
+            setLayout(null); 
+            setOpaque(false);
+            
+            // Centered Title
+            JLabel tLabel = new JLabel("<html><div style='text-align: center; width: 135px;'>" + title + "</div></html>", SwingConstants.CENTER); 
+            tLabel.setFont(new Font("SansSerif", Font.BOLD, 16)); 
+            tLabel.setBounds(10, 35, 135, 40); 
+            add(tLabel);
+            
+            // Centered Quantity
+            JLabel qLabel = new JLabel(qty, SwingConstants.CENTER); 
+            qLabel.setFont(new Font("SansSerif", Font.PLAIN, 12)); 
+            qLabel.setForeground(Color.DARK_GRAY); 
+            qLabel.setBounds(10, 85, 135, 15); 
+            add(qLabel);
+            
+            // Centered Status
+            JLabel sLabel = new JLabel(status); 
+            sLabel.setFont(new Font("SansSerif", Font.PLAIN, 12)); 
+            sLabel.setForeground(statusColor); 
+            sLabel.setBounds(65, 115, 80, 15); 
+            add(sLabel);
         }
+        
         @Override
         protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(Color.WHITE); g2.fillRoundRect(0, 0, getWidth()-1, getHeight()-1, 15, 15);
-            g2.setColor(statusColor); g2.fillOval(10, 136, 8, 8); super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g; 
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            
+            // Draw white card background
+            g2.setColor(Color.WHITE); 
+            g2.fillRoundRect(0, 0, getWidth()-1, getHeight()-1, 15, 15);
+            
+            // Draw status dot (aligned with the centered text)
+            g2.setColor(statusColor); 
+            g2.fillOval(50, 118, 8, 8); 
+            
+            super.paintComponent(g);
         }
     }
 

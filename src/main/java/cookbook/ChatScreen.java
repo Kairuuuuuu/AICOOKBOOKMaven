@@ -73,7 +73,6 @@ public class ChatScreen {
 
         frame.add(topBar);
 
-      
         boolean isFirstLoad = (chatHistoryPanel == null);
         
         if (isFirstLoad) {
@@ -157,25 +156,114 @@ public class ChatScreen {
                             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
                             buttonPanel.setOpaque(false);
                             
-                            JButton addToListBtn = new JButton("🛒 Add Ingredients to Shopping List");
+                            JButton addToListBtn = new JButton(new CartIcon());
+                            addToListBtn.setPreferredSize(new Dimension(50, 40));
                             addToListBtn.setBackground(darkGreen);
-                            addToListBtn.setForeground(Color.WHITE);
                             addToListBtn.setFocusPainted(false);
                             addToListBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
                             
                             addToListBtn.addActionListener(evt -> {
-                                MainMenu.currentRecipeName = aiResponse.recipeName;
-                                MainMenu.currentIngredients = aiResponse.ingredients;
-                                
-                                MainMenu.checkedIngredients = new java.util.ArrayList<>();
-                                for(int i = 0; i < aiResponse.ingredients.size(); i++) {
-                                    MainMenu.checkedIngredients.add(false); 
-                                }
-                                
-                                MainMenu.savedMissingIngredients = "Missing: " + aiResponse.ingredients.size() + " items";
-                                
-                              
-                                ShoppingList.showShoppingList(ChatScreen.frame, MainMenu.currentRecipeName, MainMenu.currentIngredients, MainMenu.checkedIngredients);
+                                JDialog confirmDialog = new JDialog(ChatScreen.frame, true);
+                                confirmDialog.setUndecorated(true);
+                                confirmDialog.setBackground(new Color(0, 0, 0, 0));
+                                confirmDialog.setSize(390, 844);
+                                confirmDialog.setLocationRelativeTo(ChatScreen.frame);
+
+                                JPanel overlay = new JPanel(null) {
+                                    protected void paintComponent(Graphics g) {
+                                        g.setColor(new Color(0, 0, 0, 160));
+                                        g.fillRect(0, 0, getWidth(), getHeight());
+                                    }
+                                };
+                                overlay.setOpaque(false);
+                                confirmDialog.setContentPane(overlay);
+
+                                JPanel popup = new JPanel(null) {
+                                    protected void paintComponent(Graphics g) {
+                                        Graphics2D g2 = (Graphics2D) g;
+                                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                                        g2.setColor(new Color(245, 243, 235)); 
+                                        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                                        g2.setColor(darkGreen);
+                                        g2.setStroke(new BasicStroke(2));
+                                        g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 20, 20);
+                                    }
+                                };
+                                popup.setBounds(45, 350, 300, 150);
+                                popup.setOpaque(false);
+                                overlay.add(popup);
+
+                                JLabel askLabel = new JLabel("<html><center>Do you want to add ingredients<br>to the shopping list?</center></html>", SwingConstants.CENTER);
+                                askLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+                                askLabel.setForeground(Color.BLACK);
+                                askLabel.setBounds(10, 25, 280, 40);
+                                popup.add(askLabel);
+
+                                JButton yesBtn = new JButton("Yes");
+                                yesBtn.setBounds(40, 90, 90, 35);
+                                yesBtn.setBackground(darkGreen);
+                                yesBtn.setForeground(Color.WHITE);
+                                yesBtn.setFocusPainted(false);
+                                yesBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+                                yesBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                                yesBtn.addActionListener(eYes -> {
+                                    confirmDialog.dispose(); 
+                                    
+                                    MainMenu.currentRecipeName = aiResponse.recipeName;
+                                    MainMenu.currentIngredients = aiResponse.ingredients;
+                                    
+                                    MainMenu.checkedIngredients = new java.util.ArrayList<>();
+                                    for(int i = 0; i < aiResponse.ingredients.size(); i++) {
+                                        MainMenu.checkedIngredients.add(false); 
+                                    }
+                                    
+                                    MainMenu.savedMissingIngredients = "Missing: " + aiResponse.ingredients.size() + " items";
+                                    
+                                    buttonPanel.setVisible(false);
+                                    chatHistoryPanel.revalidate();
+                                    chatHistoryPanel.repaint();
+                                    
+                                    JDialog successDialog = new JDialog(ChatScreen.frame, false);
+                                    successDialog.setUndecorated(true);
+                                    successDialog.setBackground(new Color(0, 0, 0, 0));
+                                    successDialog.setSize(260, 50);
+                                    successDialog.setLocationRelativeTo(ChatScreen.frame);
+                                    
+                                    JPanel toastPanel = new JPanel(new BorderLayout()) {
+                                        protected void paintComponent(Graphics g) {
+                                            Graphics2D g2 = (Graphics2D) g;
+                                            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                                            g2.setColor(new Color(14, 71, 17, 230)); 
+                                            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
+                                        }
+                                    };
+                                    toastPanel.setOpaque(false);
+                                    
+                                    JLabel toastLabel = new JLabel("✓ Successfully added to list!", SwingConstants.CENTER);
+                                    toastLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+                                    toastLabel.setForeground(Color.WHITE);
+                                    toastPanel.add(toastLabel, BorderLayout.CENTER);
+                                    
+                                    successDialog.setContentPane(toastPanel);
+                                    successDialog.setVisible(true);
+
+                                    Timer fadeTimer = new Timer(2000, fadeEvt -> successDialog.dispose());
+                                    fadeTimer.setRepeats(false);
+                                    fadeTimer.start();
+                                });
+                                popup.add(yesBtn);
+
+                                JButton noBtn = new JButton("No");
+                                noBtn.setBounds(170, 90, 90, 35);
+                                noBtn.setBackground(Color.WHITE);
+                                noBtn.setForeground(darkGreen);
+                                noBtn.setFocusPainted(false);
+                                noBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+                                noBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                                noBtn.addActionListener(eNo -> confirmDialog.dispose()); 
+                                popup.add(noBtn);
+
+                                confirmDialog.setVisible(true);
                             });
                             
                             buttonPanel.add(addToListBtn);
@@ -268,5 +356,26 @@ public class ChatScreen {
             };
             bubble.setOpaque(false); bubble.add(textLabel, BorderLayout.CENTER); add(bubble);
         }
+    }
+
+    static class CartIcon implements Icon {
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(Color.WHITE);
+            g2.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            
+            g2.drawLine(x + 4, y + 6, x + 8, y + 6);
+            g2.drawLine(x + 8, y + 6, x + 11, y + 16);
+            g2.drawLine(x + 11, y + 16, x + 21, y + 16);
+            g2.drawLine(x + 21, y + 16, x + 23, y + 8);
+            g2.drawLine(x + 23, y + 8, x + 9, y + 8);
+            
+            g2.fillOval(x + 11, y + 18, 4, 4);
+            g2.fillOval(x + 18, y + 18, 4, 4);
+            g2.dispose();
+        }
+        public int getIconWidth() { return 28; }
+        public int getIconHeight() { return 28; }
     }
 }

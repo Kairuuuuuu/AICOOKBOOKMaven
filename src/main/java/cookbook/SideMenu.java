@@ -6,6 +6,11 @@ import java.awt.event.*;
 
 public class SideMenu {
 
+    // 🌟 PROFILE MEMORY BANK (Now defaults to Guest until LoginScreen updates it!)
+    public static String firstName;
+    public static String lastName;
+    public static String email;
+
     public static void showMenu(JFrame parentFrame) {
         JDialog dialog = new JDialog(parentFrame, true);
         dialog.setUndecorated(true);
@@ -41,21 +46,29 @@ public class SideMenu {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(darkGreen);
                 g2.fillOval(0, 0, getWidth(), getHeight());
+                
+                // Automatically grabs the first letter of the first name
                 g2.setColor(Color.WHITE);
                 g2.setFont(new Font("SansSerif", Font.PLAIN, 40));
-                g2.drawString("J", 22, 48); 
+                String initial = firstName.isEmpty() ? "" : firstName.substring(0, 1).toUpperCase();
+                FontMetrics fm = g2.getFontMetrics();
+                int textX = (getWidth() - fm.stringWidth(initial)) / 2;
+                int textY = ((getHeight() - fm.getHeight()) / 2) + fm.getAscent();
+                g2.drawString(initial, textX, textY); 
             }
         };
         avatar.setOpaque(false);
         avatar.setBounds(20, 80, 70, 70);
         menuPanel.add(avatar);
 
-        JLabel nameLabel = new JLabel("Jowin Dirk");
+        // 🌟 DISPLAYS THE DYNAMIC NAME
+        JLabel nameLabel = new JLabel(firstName + " " + lastName);
         nameLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
         nameLabel.setBounds(105, 85, 160, 25);
         menuPanel.add(nameLabel);
 
-        JLabel emailLabel = new JLabel("Jowin@Dirkcookbook.com");
+        // 🌟 DISPLAYS THE DYNAMIC EMAIL PULLED FROM LOGIN SCREEN
+        JLabel emailLabel = new JLabel(email);
         emailLabel.setFont(new Font("SansSerif", Font.BOLD, 10));
         emailLabel.setBounds(105, 110, 170, 15);
         menuPanel.add(emailLabel);
@@ -97,7 +110,8 @@ public class SideMenu {
         });
 
         addMenuItem(menuPanel, "❓", "Help & FAQs", 315, () -> {
-            System.out.println("Help clicked");
+            dialog.dispose();
+            showHelpPopup(parentFrame);
         });
 
         JLabel backLabel = new JLabel("⬅  Back To Home Page");
@@ -140,6 +154,50 @@ public class SideMenu {
         panel.add(itemPanel);
     }
 
+    private static void showHelpPopup(JFrame parentFrame) {
+        JDialog dialog = createOverlayDialog(parentFrame);
+
+        MainMenu.RoundPanel popup = new MainMenu.RoundPanel();
+        popup.setBounds(45, 320, 300, 180); 
+        popup.setLayout(null);
+        dialog.add(popup);
+
+        Color darkGreen = new Color(14, 71, 17);
+
+        JLabel title = new JLabel("Help & Support", SwingConstants.CENTER);
+        title.setFont(new Font("SansSerif", Font.BOLD, 20));
+        title.setForeground(darkGreen);
+        title.setBounds(0, 20, 300, 25);
+        popup.add(title);
+
+        JLabel subtitle = new JLabel("<html><center>For any issues, feedback, or inquiries,<br>please contact our support team:</center></html>", SwingConstants.CENTER);
+        subtitle.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        subtitle.setForeground(Color.DARK_GRAY);
+        subtitle.setBounds(0, 55, 300, 35);
+        popup.add(subtitle);
+
+        JLabel emailLabel = new JLabel("yjac2005@gmail.com", SwingConstants.CENTER);
+        emailLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        emailLabel.setForeground(Color.BLACK);
+        emailLabel.setBounds(0, 95, 300, 25);
+        popup.add(emailLabel);
+
+        MainMenu.AnimatedButton closeBtn = new MainMenu.AnimatedButton("Close", true);
+        closeBtn.setBounds(100, 130, 100, 30);
+        closeBtn.addActionListener(e -> dialog.dispose());
+        popup.add(closeBtn);
+
+        dialog.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                if (e.getX() < 45 || e.getX() > 345 || e.getY() < 320 || e.getY() > 500) {
+                    dialog.dispose();
+                }
+            }
+        });
+
+        dialog.setVisible(true);
+    }
+
     private static void showLogoutPopup(JFrame parentFrame) {
         JDialog dialog = createOverlayDialog(parentFrame);
 
@@ -177,7 +235,7 @@ public class SideMenu {
         JDialog dialog = createOverlayDialog(parentFrame);
 
         MainMenu.RoundPanel popup = new MainMenu.RoundPanel();
-        popup.setBounds(45, 140, 300, 440); 
+        popup.setBounds(45, 220, 300, 320); 
         popup.setLayout(null);
         dialog.add(popup);
 
@@ -195,7 +253,11 @@ public class SideMenu {
                 
                 g2.setColor(Color.WHITE);
                 g2.setFont(new Font("SansSerif", Font.PLAIN, 40));
-                g2.drawString("J", 22, 48); 
+                String initial = firstName.isEmpty() ? "" : firstName.substring(0, 1).toUpperCase();
+                FontMetrics fm = g2.getFontMetrics();
+                int textX = (70 - fm.stringWidth(initial)) / 2;
+                int textY = ((70 - fm.getHeight()) / 2) + fm.getAscent();
+                g2.drawString(initial, textX, textY); 
 
                 g2.setColor(Color.WHITE);
                 g2.fillOval(45, 45, 25, 25);
@@ -209,33 +271,40 @@ public class SideMenu {
         avatar.setBounds(115, 55, 75, 75);
         popup.add(avatar);
 
-        JLabel emailLabel = new JLabel("Jowin@Dirkcookbook.com", SwingConstants.CENTER);
+        // 🌟 DISPLAYS THE DYNAMIC EMAIL IN THE POPUP
+        JLabel emailLabel = new JLabel(email, SwingConstants.CENTER);
         emailLabel.setFont(new Font("SansSerif", Font.PLAIN, 10));
         emailLabel.setBounds(0, 135, 300, 15);
         popup.add(emailLabel);
 
-        addFormInput(popup, "First Name:", "Jowin", 160, 30);
-        addFormInput(popup, "Last Name:", "Dirk", 215, 30);
+        JLabel fNameLabel = new JLabel("First Name:");
+        fNameLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        fNameLabel.setBounds(30, 160, 240, 15);
+        popup.add(fNameLabel);
 
-        JLabel bioLabel = new JLabel("Culinary Bio:");
-        bioLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        bioLabel.setBounds(30, 270, 240, 15);
-        popup.add(bioLabel);
-
-        JTextArea bioField = new JTextArea("Tell us about your cooking style...");
-        bioField.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        bioField.setForeground(Color.BLACK);
-        bioField.setLineWrap(true);
-        bioField.setWrapStyleWord(true);
-        bioField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.GRAY, 1), 
-            BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        JTextField fNameField = new JTextField(firstName);
+        fNameField.setBounds(30, 175, 240, 30);
+        fNameField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.GRAY, 1),
+            BorderFactory.createEmptyBorder(0, 5, 0, 5)
         ));
-        bioField.setBounds(30, 285, 240, 80);
-        popup.add(bioField);
+        popup.add(fNameField);
+
+        JLabel lNameLabel = new JLabel("Last Name:");
+        lNameLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        lNameLabel.setBounds(30, 215, 240, 15);
+        popup.add(lNameLabel);
+
+        JTextField lNameField = new JTextField(lastName);
+        lNameField.setBounds(30, 230, 240, 30);
+        lNameField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.GRAY, 1),
+            BorderFactory.createEmptyBorder(0, 5, 0, 5)
+        ));
+        popup.add(lNameField);
 
         MainMenu.AnimatedButton cancelBtn = new MainMenu.AnimatedButton("Cancel", false);
-        cancelBtn.setBounds(30, 385, 110, 30);
+        cancelBtn.setBounds(30, 275, 110, 30);
         cancelBtn.addActionListener(e -> {
             dialog.dispose();
             SideMenu.showMenu(parentFrame); 
@@ -243,37 +312,26 @@ public class SideMenu {
         popup.add(cancelBtn);
 
         MainMenu.AnimatedButton saveBtn = new MainMenu.AnimatedButton("Save", true);
-        saveBtn.setBounds(160, 385, 110, 30);
+        saveBtn.setBounds(160, 275, 110, 30);
+        
         saveBtn.addActionListener(e -> {
+            firstName = fNameField.getText().trim();
+            lastName = lNameField.getText().trim();
+            
             dialog.dispose();
-            SideMenu.showMenu(parentFrame);
+            SideMenu.showMenu(parentFrame); 
         });
         popup.add(saveBtn);
 
         dialog.addMouseListener(new MouseAdapter() {
             public void mousePressed(MouseEvent e) {
-                if (e.getX() < 45 || e.getX() > 345 || e.getY() < 140 || e.getY() > 580) {
+                if (e.getX() < 45 || e.getX() > 345 || e.getY() < 220 || e.getY() > 540) {
                     dialog.dispose();
                 }
             }
         });
 
         dialog.setVisible(true);
-    }
-
-    private static void addFormInput(JPanel parent, String labelText, String defaultText, int y, int height) {
-        JLabel label = new JLabel(labelText);
-        label.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        label.setBounds(30, y, 240, 15);
-        parent.add(label);
-
-        JTextField field = new JTextField(defaultText);
-        field.setBounds(30, y + 15, 240, height);
-        field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.GRAY, 1),
-            BorderFactory.createEmptyBorder(0, 5, 0, 5)
-        ));
-        parent.add(field);
     }
 
     private static JDialog createOverlayDialog(JFrame parentFrame) {

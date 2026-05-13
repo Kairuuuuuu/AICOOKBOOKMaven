@@ -145,6 +145,21 @@ public class LoginScreen {
                     loadingOverlay.setVisible(false);
 
                     if (resultMessage.equals("SUCCESS")) {
+                        
+                        // 🌟 CONNECTS TO THE SIDE MENU PROFILE
+                        SideMenu.email = email;
+                        
+                        // Extracts everything before the "@" symbol to use as the first name
+                        String generatedName = email.split("@")[0];
+                        
+                        // Capitalizes the first letter of the name (e.g., "jowin" -> "Jowin")
+                        if (generatedName.length() > 0) {
+                            generatedName = generatedName.substring(0, 1).toUpperCase() + generatedName.substring(1).toLowerCase();
+                        }
+                        
+                        SideMenu.firstName = generatedName;
+                        SideMenu.lastName = ""; // Leaves the last name blank
+
                         frame.dispose(); 
                         MainMenu.showMenu(); 
                     } else {

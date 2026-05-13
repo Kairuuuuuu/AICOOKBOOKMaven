@@ -12,13 +12,14 @@ public class MainMenu {
     public static JFrame frame;
     public static JLabel missingLabel; 
     public static JLabel mealLabel; 
+    public static JLabel budgetLabel; 
     
     // 🌟 THE MEMORY BANK
     public static String currentRecipeName = "No meal selected";
-    public static String currentRecipeImagePath = "default_food.jpg"; 
     public static List<String> currentIngredients = new ArrayList<>();
     public static List<Boolean> checkedIngredients = new ArrayList<>();
     public static String savedMissingIngredients = "Missing: 0 items"; 
+    public static String currentBudget = "Php 0.00"; // <-- NEW BUDGET MEMORY
 
     public static void showMenu() {
         frame = new JFrame("Dirk's CookBook - Main Menu");
@@ -121,35 +122,38 @@ public class MainMenu {
         JLabel mealLabelTitle = new JLabel("Selected Meal:");
         mealLabelTitle.setFont(new Font("SansSerif", Font.PLAIN, 13));
         mealLabelTitle.setForeground(Color.DARK_GRAY);
-        mealLabelTitle.setBounds(15, 45, 180, 20);
+        mealLabelTitle.setBounds(15, 45, 300, 20);
         card3.add(mealLabelTitle);
 
         mealLabel = new JLabel(currentRecipeName);
         mealLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         mealLabel.setForeground(Color.BLACK);
-        mealLabel.setBounds(15, 65, 180, 20);
+        mealLabel.setBounds(15, 65, 300, 20);
         card3.add(mealLabel);
 
-        RoundImagePanel mealImage = new RoundImagePanel(currentRecipeImagePath); 
-        mealImage.setBounds(215, 40, 90, 75);
-        card3.add(mealImage);
+        // 🌟 RE-ADDED: The Budget Tracker on the Shopping List
+        budgetLabel = new JLabel("Budget: " + currentBudget);
+        budgetLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        budgetLabel.setForeground(darkGreen);
+        budgetLabel.setBounds(15, 85, 300, 20);
+        card3.add(budgetLabel);
 
         missingLabel = new JLabel(savedMissingIngredients);
         missingLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         missingLabel.setForeground(Color.BLACK);
-        missingLabel.setBounds(15, 100, 300, 20);
+        missingLabel.setBounds(15, 105, 300, 20);
         card3.add(missingLabel);
 
         AnimatedButton doneBtn = new AnimatedButton("Done", false);
         doneBtn.setBounds(100, 395, 135, 30); 
         doneBtn.addActionListener(e -> {
-            int missingCount = 0;
-            for (Boolean isChecked : checkedIngredients) {
-                if (!isChecked) {
-                    missingCount++;
-                }
-            }
-            savedMissingIngredients = "Missing: " + missingCount + " items";
+            // Wipes data
+            currentRecipeName = "No meal selected";
+            currentIngredients.clear();
+            checkedIngredients.clear();
+            savedMissingIngredients = "Missing: 0 items";
+            
+            // Refreshes UI
             Point loc = frame.getLocation(); 
             frame.dispose(); 
             showMenu(); 
@@ -186,12 +190,10 @@ public class MainMenu {
                     cb.setSelected(true);
                 }
                 
-                // When a checkbox is clicked, update the array AND check if the Done button should unlock
                 cb.addItemListener(e -> {
                     if (index < checkedIngredients.size()) {
                         checkedIngredients.set(index, e.getStateChange() == ItemEvent.SELECTED);
                     }
-                    // Checks if ALL boxes are true. (If it doesn't contain a 'false', then all are true)
                     boolean allChecked = !checkedIngredients.isEmpty() && !checkedIngredients.contains(false);
                     doneBtn.setEnabled(allChecked); 
                     doneBtn.setSolid(allChecked); 
@@ -203,7 +205,7 @@ public class MainMenu {
         }
 
         JScrollPane listScroll = new JScrollPane(listPanel);
-        listScroll.setBounds(15, 130, 295, 255); 
+        listScroll.setBounds(15, 135, 295, 250); // Shifted down slightly to fit the budget label
         listScroll.setOpaque(false);
         listScroll.getViewport().setOpaque(false);
         listScroll.setBorder(null); 
@@ -215,12 +217,10 @@ public class MainMenu {
         
         card3.add(listScroll);
 
-        // Set the initial status of the Done button when the menu first loads
         boolean initialAllChecked = !checkedIngredients.isEmpty() && !checkedIngredients.contains(false);
         doneBtn.setEnabled(initialAllChecked);
         doneBtn.setSolid(initialAllChecked);
         card3.add(doneBtn);
-
 
         frame.add(card3);
 
@@ -263,7 +263,6 @@ public class MainMenu {
         frame.setVisible(true);
     }
 
-    // --- Custom Flat Checkbox Icon ---
     static class CustomCheckBoxIcon implements Icon {
         private final boolean selected;
         private final int size = 18; 
@@ -332,7 +331,6 @@ public class MainMenu {
         }
     }
     
-    // --- UPDATED: Animated Button now supports disabled state (Grayed out) ---
     public static class AnimatedButton extends JButton {
         int shrink = 0; boolean isSolid;
         public AnimatedButton(String text, boolean isSolid) {
@@ -371,7 +369,6 @@ public class MainMenu {
             int currentShrink = (isEnabled() && shrink > 0) ? shrink : 0;
             if (currentShrink > 0) g2.translate(currentShrink, currentShrink);
 
-            // Draws Gray if disabled, Green if Solid, White if Outlined
             if (!isEnabled()) {
                 g.setColor(new Color(220, 220, 220));
                 g.fillRoundRect(0, 0, getWidth()-1-(currentShrink*2), getHeight()-1-(currentShrink*2), 30, 30);
@@ -386,31 +383,6 @@ public class MainMenu {
             }
             super.paintComponent(g);
             if (currentShrink > 0) g2.translate(-currentShrink, -currentShrink);
-        }
-    }
-
-    static class RoundImagePanel extends JPanel {
-        Image image;
-        public RoundImagePanel(String imagePath) { 
-            setOpaque(false); 
-            try { 
-                ImageIcon icon = new ImageIcon(imagePath); 
-                if (icon.getIconWidth() != -1) image = icon.getImage(); 
-            } catch (Exception e) {} 
-        }
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(Color.LIGHT_GRAY); g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
-            if (image != null) { 
-                Shape oldClip = g2.getClip(); 
-                g2.setClip(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15)); 
-                g2.drawImage(image, 0, 0, getWidth(), getHeight(), this); 
-                g2.setClip(oldClip); 
-            } else { 
-                g2.setColor(Color.DARK_GRAY); 
-                g2.setFont(new Font("SansSerif", Font.PLAIN, 24)); 
-                g2.drawString("📷", getWidth()/2 - 12, getHeight()/2 + 8); 
-            }
         }
     }
 
