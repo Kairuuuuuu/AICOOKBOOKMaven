@@ -154,7 +154,6 @@ public class ChangePasswordScreen {
 
                     if (resultMessage.equals("SUCCESS")) {
                         
-                        // 🌟 THE FIX: The "Window Nuke" Loop
                         // This loops through EVERY open tab, menu, and popup in the app and destroys them!
                         for (Window window : Window.getWindows()) {
                             window.dispose(); 
