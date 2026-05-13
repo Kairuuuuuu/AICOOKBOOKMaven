@@ -19,6 +19,7 @@ public class AIChatBot {
         public String recipeName; 
         public List<String> ingredients;
         public boolean hasRecipe;
+        public double totalEstimatedCost; 
     }
 
     public static ParsedResponse askChefAI(String userMessage) {
@@ -26,14 +27,31 @@ public class AIChatBot {
         result.ingredients = new ArrayList<>();
         result.hasRecipe = false;
         result.recipeName = "AI Suggested Recipe"; 
+        result.totalEstimatedCost = 0.0;
 
         try {
             HttpClient client = HttpClient.newHttpClient();
 
-            String systemPrompt = "You are an AI chef. CRITICAL RULES:\\n"
-                    + "1. The VERY FIRST LINE of your response MUST be exactly 'RECIPE_NAME: ' followed by the dish name. Do not say anything else first.\\n"
+            double currentBudget = 0.0;
+            try {
+                String budgetStr = MainMenu.currentBudget.replace("Php", "").replace(",", "").trim();
+                currentBudget = Double.parseDouble(budgetStr);
+            } catch (Exception e) {}
+
+            // 🌟 RELAXED BUDGET INSTRUCTION: AI will try to stay under budget but won't refuse to output the recipe.
+            String budgetInstruction = "";
+            if (currentBudget > 0) {
+                budgetInstruction = "The user has a budget of Php " + currentBudget + ". "
+                        + "Try to recommend a recipe where the total estimated market price of ingredients stays under this amount. "
+                        + "However, ALWAYS output the recipe and ingredients block even if it goes slightly over budget.";
+            }
+
+            String systemPrompt = "You are a Filipino AI chef. " + budgetInstruction + "\\n\\n"
+                    + "CRITICAL RULES IF PROVIDING A RECIPE:\\n"
+                    + "1. The VERY FIRST LINE MUST be exactly 'RECIPE_NAME: ' followed by the dish name.\\n"
                     + "2. You MUST wrap ingredients EXACTLY like this:\\n"
-                    + "[INGREDIENTS_START]\\n- ingredient 1\\n- ingredient 2\\n[INGREDIENTS_END]\\n"
+                    + "[INGREDIENTS_START]\\n- 1kg Chicken | 180.00\\n- 2 cloves Garlic | 5.00\\n[INGREDIENTS_END]\\n"
+                    + "RULE 2b: DO NOT write the price in the ingredient name string. Put the price ONLY as a raw number after the '|' symbol.\\n"
                     + "3. Include Numbered Instructions below that.";
 
             String jsonPayload = String.format("{\n" +
@@ -87,10 +105,26 @@ public class AIChatBot {
                 String[] items = rawIngredients.split("\n");
                 for (String item : items) {
                     if (!item.trim().isEmpty()) {
-                        result.ingredients.add(item.replace("-", "").replace("*", "").trim()); 
+                        String cleanItem = item.replace("-", "").replace("*", "").trim();
+                        
+                        if (cleanItem.contains("|")) {
+                            String[] parts = cleanItem.split("\\|");
+                            
+                            String name = parts[0].replaceAll("\\(.*?\\d+.*?\\)", "").trim(); 
+                            
+                            try {
+                                double price = Double.parseDouble(parts[1].trim());
+                                result.totalEstimatedCost += price;
+                                result.ingredients.add(name + " (Php " + String.format("%.2f", price) + ")");
+                            } catch (Exception e) {
+                                result.ingredients.add(name); 
+                            }
+                        } else {
+                            result.ingredients.add(cleanItem.replaceAll("\\(.*?\\d+.*?\\)", "").trim());
+                        }
                     }
                 }
-                rawText = rawText.replace("[INGREDIENTS_START]", "\n🛒 **Ingredients:**\n").replace("[INGREDIENTS_END]", "\n");
+                rawText = rawText.replace("[INGREDIENTS_START]", "\n🛒 **Ingredients & Estimated Cost:**\n").replace("[INGREDIENTS_END]", "\n");
             }
 
             result.displayMessage = rawText;

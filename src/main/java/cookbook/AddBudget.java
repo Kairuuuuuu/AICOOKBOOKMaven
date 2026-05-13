@@ -35,7 +35,7 @@ public class AddBudget {
 
         MainMenu.RoundPanel popupPanel = new MainMenu.RoundPanel();
         popupPanel.setBackground(Color.WHITE);
-        popupPanel.setBounds(45, 312, 300, 220); 
+        popupPanel.setBounds(45, 312, 300, 225); // Slightly taller to fit the error label
         popupPanel.setLayout(null);
         
         popupPanel.addMouseListener(new MouseAdapter() {});
@@ -63,26 +63,49 @@ public class AddBudget {
         budgetField.setBounds(120, 105, 150, 35);
         popupPanel.add(budgetField);
 
+        // 🌟 NEW: Error Label for contradicting budgets!
+        JLabel errorLabel = new JLabel("", SwingConstants.CENTER);
+        errorLabel.setFont(new Font("SansSerif", Font.BOLD, 11));
+        errorLabel.setForeground(Color.RED);
+        errorLabel.setBounds(20, 145, 260, 15);
+        errorLabel.setVisible(false);
+        popupPanel.add(errorLabel);
+
         MainMenu.AnimatedButton closeBtn = new MainMenu.AnimatedButton("Close", false);
-        closeBtn.setBounds(20, 160, 120, 35);
+        closeBtn.setBounds(20, 165, 120, 35);
         closeBtn.addActionListener(e -> dialog.dispose());
         popupPanel.add(closeBtn);
 
         MainMenu.AnimatedButton saveBtn = new MainMenu.AnimatedButton("Save", true);
-        saveBtn.setBounds(150, 160, 120, 35);
+        saveBtn.setBounds(150, 165, 120, 35);
         
-        // 🌟 UPDATED: Saves to Memory Bank and shows the transparent Toast!
         saveBtn.addActionListener(e -> {
-            String newBudget = budgetField.getText().trim();
+            String newBudgetStr = budgetField.getText().trim();
             
-            // Only update if they typed something valid
-            if (!newBudget.isEmpty() && !newBudget.equals("Enter Budget")) {
+            if (!newBudgetStr.isEmpty() && !newBudgetStr.equals("Enter Budget")) {
+                
+                // Convert the user's text into a math number so we can check it
+                double numericNewBudget = 0.0;
+                try {
+                    numericNewBudget = Double.parseDouble(newBudgetStr.toLowerCase().replace("php", "").replace(",", "").trim());
+                } catch (Exception ex) {
+                    errorLabel.setText("Please enter a valid number!");
+                    errorLabel.setVisible(true);
+                    return; // Stops the save
+                }
+
+                // 🌟 THE FIX: Compare the new budget to the current shopping cart cost!
+                if (MainMenu.currentTotalCost > 0.0 && numericNewBudget < MainMenu.currentTotalCost) {
+                    errorLabel.setText("Too low! Current meal costs Php " + String.format("%.2f", MainMenu.currentTotalCost));
+                    errorLabel.setVisible(true);
+                    return; // Blocks the save and forces them to keep the higher budget!
+                }
                 
                 // Add "Php" automatically if they forgot to type it
-                if (!newBudget.toLowerCase().startsWith("php")) {
-                    MainMenu.currentBudget = "Php " + newBudget;
+                if (!newBudgetStr.toLowerCase().startsWith("php")) {
+                    MainMenu.currentBudget = "Php " + String.format("%.2f", numericNewBudget);
                 } else {
-                    MainMenu.currentBudget = newBudget;
+                    MainMenu.currentBudget = newBudgetStr;
                 }
                 
                 // Instantly update the Shopping List Dashboard label
@@ -100,7 +123,6 @@ public class AddBudget {
         dialog.setVisible(true);
     }
 
-    // 🌟 THE TRANSPARENT POPUP LOGIC
     private static void showSuccessToast(JFrame parentFrame) {
         JDialog successDialog = new JDialog(parentFrame, false);
         successDialog.setUndecorated(true);
@@ -126,7 +148,6 @@ public class AddBudget {
         successDialog.setContentPane(toastPanel);
         successDialog.setVisible(true);
 
-        // Fades out automatically after 2 seconds
         Timer fadeTimer = new Timer(2000, fadeEvt -> successDialog.dispose());
         fadeTimer.setRepeats(false);
         fadeTimer.start();

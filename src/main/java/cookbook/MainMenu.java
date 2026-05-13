@@ -19,7 +19,8 @@ public class MainMenu {
     public static List<String> currentIngredients = new ArrayList<>();
     public static List<Boolean> checkedIngredients = new ArrayList<>();
     public static String savedMissingIngredients = "Missing: 0 items"; 
-    public static String currentBudget = "Php 0.00"; // <-- NEW BUDGET MEMORY
+    public static String currentBudget = "Php 0.00"; 
+    public static double currentTotalCost = 0.0; 
 
     public static void showMenu() {
         frame = new JFrame("Dirk's CookBook - Main Menu");
@@ -85,7 +86,6 @@ public class MainMenu {
 
         frame.add(topBar);
 
-        // --- CARD 1: Generate Meal ---
         RoundPanel card1 = new RoundPanel();
         card1.setBounds(25, 120, 325, 120);
         card1.setLayout(null);
@@ -108,7 +108,6 @@ public class MainMenu {
 
         frame.add(card1);
 
-        // --- CARD 3: Shopping List ---
         RoundPanel card3 = new RoundPanel();
         card3.setBounds(25, 255, 325, 440); 
         card3.setLayout(null);
@@ -118,6 +117,95 @@ public class MainMenu {
         shopTitle.setForeground(darkGreen);
         shopTitle.setBounds(15, 15, 200, 25);
         card3.add(shopTitle);
+
+        // 🌟 NEW: THE TRASH CAN ICON
+        // Only shows up if a meal is actually selected
+        if (!currentRecipeName.equals("No meal selected")) {
+            JLabel trashBtn = new JLabel("🗑");
+            trashBtn.setFont(new Font("SansSerif", Font.PLAIN, 22));
+            trashBtn.setForeground(new Color(200, 50, 50)); // Red color
+            trashBtn.setBounds(285, 15, 30, 30);
+            trashBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            
+            trashBtn.addMouseListener(new MouseAdapter() {
+                public void mousePressed(MouseEvent e) {
+                    
+                    // 🌟 CONFIRMATION POPUP
+                    JDialog confirmDialog = new JDialog(MainMenu.frame, true);
+                    confirmDialog.setUndecorated(true);
+                    confirmDialog.setBackground(new Color(0, 0, 0, 0));
+                    confirmDialog.setSize(390, 844);
+                    confirmDialog.setLocationRelativeTo(MainMenu.frame);
+
+                    JPanel overlay = new JPanel(null) {
+                        protected void paintComponent(Graphics g) {
+                            g.setColor(new Color(0, 0, 0, 160));
+                            g.fillRect(0, 0, getWidth(), getHeight());
+                        }
+                    };
+                    overlay.setOpaque(false);
+                    confirmDialog.setContentPane(overlay);
+
+                    JPanel popup = new JPanel(null) {
+                        protected void paintComponent(Graphics g) {
+                            Graphics2D g2 = (Graphics2D) g;
+                            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                            g2.setColor(new Color(245, 243, 235));
+                            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                            g2.setColor(darkGreen);
+                            g2.setStroke(new BasicStroke(2));
+                            g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 20, 20);
+                        }
+                    };
+                    popup.setBounds(45, 350, 300, 150);
+                    popup.setOpaque(false);
+                    overlay.add(popup);
+
+                    JLabel askLabel = new JLabel("<html><center>Are you sure you want to<br>trash this recipe?</center></html>", SwingConstants.CENTER);
+                    askLabel.setFont(new Font("SansSerif", Font.BOLD, 15));
+                    askLabel.setForeground(Color.BLACK);
+                    askLabel.setBounds(10, 25, 280, 40);
+                    popup.add(askLabel);
+
+                    JButton yesBtn = new JButton("Yes");
+                    yesBtn.setBounds(40, 90, 90, 35);
+                    yesBtn.setBackground(new Color(200, 50, 50)); // Red button for deletion
+                    yesBtn.setForeground(Color.WHITE);
+                    yesBtn.setFocusPainted(false);
+                    yesBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+                    yesBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                    
+                    // IF YES: Wipe everything and reload the menu
+                    yesBtn.addActionListener(eYes -> {
+                        confirmDialog.dispose();
+                        currentRecipeName = "No meal selected";
+                        currentIngredients.clear();
+                        checkedIngredients.clear();
+                        savedMissingIngredients = "Missing: 0 items";
+                        currentTotalCost = 0.0;
+                        
+                        Point loc = frame.getLocation(); 
+                        frame.dispose(); 
+                        showMenu(); 
+                        frame.setLocation(loc); 
+                    });
+                    popup.add(yesBtn);
+
+                    JButton noBtn = new JButton("No");
+                    noBtn.setBounds(170, 90, 90, 35);
+                    noBtn.setBackground(Color.WHITE);
+                    noBtn.setForeground(darkGreen);
+                    noBtn.setFocusPainted(false);
+                    noBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+                    noBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                    noBtn.addActionListener(eNo -> confirmDialog.dispose());
+                    popup.add(noBtn);
+
+                    confirmDialog.setVisible(true);
+                }
+            });
+            card3.add(trashBtn);
+        }
 
         JLabel mealLabelTitle = new JLabel("Selected Meal:");
         mealLabelTitle.setFont(new Font("SansSerif", Font.PLAIN, 13));
@@ -131,29 +219,43 @@ public class MainMenu {
         mealLabel.setBounds(15, 65, 300, 20);
         card3.add(mealLabel);
 
-        // 🌟 RE-ADDED: The Budget Tracker on the Shopping List
         budgetLabel = new JLabel("Budget: " + currentBudget);
         budgetLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
         budgetLabel.setForeground(darkGreen);
         budgetLabel.setBounds(15, 85, 300, 20);
         card3.add(budgetLabel);
 
+        JLabel totalCostLabel = new JLabel("Estimated Cost: Php " + String.format("%.2f", currentTotalCost));
+        totalCostLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        
+        double numericBudget = 0.0;
+        try {
+            numericBudget = Double.parseDouble(currentBudget.replace("Php", "").replace(",", "").trim());
+        } catch (Exception e) {}
+        
+        if (currentTotalCost > numericBudget && numericBudget > 0) {
+            totalCostLabel.setForeground(Color.RED);
+        } else {
+            totalCostLabel.setForeground(darkGreen);
+        }
+        totalCostLabel.setBounds(15, 105, 300, 20);
+        card3.add(totalCostLabel);
+
         missingLabel = new JLabel(savedMissingIngredients);
         missingLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         missingLabel.setForeground(Color.BLACK);
-        missingLabel.setBounds(15, 105, 300, 20);
+        missingLabel.setBounds(15, 125, 300, 20);
         card3.add(missingLabel);
 
         AnimatedButton doneBtn = new AnimatedButton("Done", false);
         doneBtn.setBounds(100, 395, 135, 30); 
         doneBtn.addActionListener(e -> {
-            // Wipes data
             currentRecipeName = "No meal selected";
             currentIngredients.clear();
             checkedIngredients.clear();
             savedMissingIngredients = "Missing: 0 items";
+            currentTotalCost = 0.0; 
             
-            // Refreshes UI
             Point loc = frame.getLocation(); 
             frame.dispose(); 
             showMenu(); 
@@ -205,7 +307,7 @@ public class MainMenu {
         }
 
         JScrollPane listScroll = new JScrollPane(listPanel);
-        listScroll.setBounds(15, 135, 295, 250); // Shifted down slightly to fit the budget label
+        listScroll.setBounds(15, 155, 295, 230); 
         listScroll.setOpaque(false);
         listScroll.getViewport().setOpaque(false);
         listScroll.setBorder(null); 

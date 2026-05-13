@@ -163,6 +163,118 @@ public class ChatScreen {
                             addToListBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
                             
                             addToListBtn.addActionListener(evt -> {
+                                
+                                // 🌟 1. FRESHLY FETCH THE BUDGET EXACTLY WHEN CLICKED
+                                double checkBudget = 0.0;
+                                try {
+                                    checkBudget = Double.parseDouble(MainMenu.currentBudget.replace("Php", "").replace(",", "").trim());
+                                } catch (Exception ex) {}
+
+                                // 🌟 2. CHECK IF BUDGET IS 0
+                                if (checkBudget <= 0.0) {
+                                    JDialog warningDialog = new JDialog(ChatScreen.frame, true);
+                                    warningDialog.setUndecorated(true);
+                                    warningDialog.setBackground(new Color(0, 0, 0, 0));
+                                    warningDialog.setSize(390, 844);
+                                    warningDialog.setLocationRelativeTo(ChatScreen.frame);
+
+                                    JPanel warnOverlay = new JPanel(null) {
+                                        protected void paintComponent(Graphics g) {
+                                            g.setColor(new Color(0, 0, 0, 160));
+                                            g.fillRect(0, 0, getWidth(), getHeight());
+                                        }
+                                    };
+                                    warnOverlay.setOpaque(false);
+                                    warningDialog.setContentPane(warnOverlay);
+
+                                    JPanel warnPopup = new JPanel(null) {
+                                        protected void paintComponent(Graphics g) {
+                                            Graphics2D g2 = (Graphics2D) g;
+                                            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                                            g2.setColor(new Color(245, 243, 235));
+                                            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                                            g2.setColor(darkGreen);
+                                            g2.setStroke(new BasicStroke(2));
+                                            g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 20, 20);
+                                        }
+                                    };
+                                    warnPopup.setBounds(45, 350, 300, 130);
+                                    warnPopup.setOpaque(false);
+                                    warnOverlay.add(warnPopup);
+
+                                    JLabel warnLabel = new JLabel("<html><center>You didn't input a budget yet!<br>Please set it via the '$' icon.</center></html>", SwingConstants.CENTER);
+                                    warnLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+                                    warnLabel.setForeground(Color.BLACK);
+                                    warnLabel.setBounds(10, 25, 280, 40);
+                                    warnPopup.add(warnLabel);
+
+                                    JButton okBtn = new JButton("OK");
+                                    okBtn.setBounds(100, 75, 100, 35);
+                                    okBtn.setBackground(darkGreen);
+                                    okBtn.setForeground(Color.WHITE);
+                                    okBtn.setFocusPainted(false);
+                                    okBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+                                    okBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                                    okBtn.addActionListener(eOk -> warningDialog.dispose());
+                                    warnPopup.add(okBtn);
+
+                                    warningDialog.setVisible(true);
+                                    return; 
+                                }
+
+                                // 🌟 3. NEW CHECK: OVER BUDGET WARNING
+                                if (aiResponse.totalEstimatedCost > checkBudget) {
+                                    JDialog warningDialog = new JDialog(ChatScreen.frame, true);
+                                    warningDialog.setUndecorated(true);
+                                    warningDialog.setBackground(new Color(0, 0, 0, 0));
+                                    warningDialog.setSize(390, 844);
+                                    warningDialog.setLocationRelativeTo(ChatScreen.frame);
+
+                                    JPanel warnOverlay = new JPanel(null) {
+                                        protected void paintComponent(Graphics g) {
+                                            g.setColor(new Color(0, 0, 0, 160));
+                                            g.fillRect(0, 0, getWidth(), getHeight());
+                                        }
+                                    };
+                                    warnOverlay.setOpaque(false);
+                                    warningDialog.setContentPane(warnOverlay);
+
+                                    JPanel warnPopup = new JPanel(null) {
+                                        protected void paintComponent(Graphics g) {
+                                            Graphics2D g2 = (Graphics2D) g;
+                                            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                                            g2.setColor(new Color(245, 243, 235));
+                                            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                                            g2.setColor(darkGreen);
+                                            g2.setStroke(new BasicStroke(2));
+                                            g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 20, 20);
+                                        }
+                                    };
+                                    warnPopup.setBounds(45, 350, 300, 160); // Slightly taller for extra text
+                                    warnPopup.setOpaque(false);
+                                    warnOverlay.add(warnPopup);
+
+                                    JLabel warnLabel = new JLabel("<html><center>Insufficient Budget!<br>This recipe costs Php " + String.format("%.2f", aiResponse.totalEstimatedCost) + "<br>Your budget is only Php " + String.format("%.2f", checkBudget) + "</center></html>", SwingConstants.CENTER);
+                                    warnLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+                                    warnLabel.setForeground(Color.RED); // Visually distinct error
+                                    warnLabel.setBounds(10, 20, 280, 60);
+                                    warnPopup.add(warnLabel);
+
+                                    JButton okBtn = new JButton("OK");
+                                    okBtn.setBounds(100, 100, 100, 35);
+                                    okBtn.setBackground(darkGreen);
+                                    okBtn.setForeground(Color.WHITE);
+                                    okBtn.setFocusPainted(false);
+                                    okBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+                                    okBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                                    okBtn.addActionListener(eOk -> warningDialog.dispose());
+                                    warnPopup.add(okBtn);
+
+                                    warningDialog.setVisible(true);
+                                    return; // STOPS THEM FROM ADDING IT
+                                }
+
+                                // 4. IF ALL CHECKS PASS, PROCEED NORMALLY
                                 JDialog confirmDialog = new JDialog(ChatScreen.frame, true);
                                 confirmDialog.setUndecorated(true);
                                 confirmDialog.setBackground(new Color(0, 0, 0, 0));
@@ -211,6 +323,7 @@ public class ChatScreen {
                                     
                                     MainMenu.currentRecipeName = aiResponse.recipeName;
                                     MainMenu.currentIngredients = aiResponse.ingredients;
+                                    MainMenu.currentTotalCost = aiResponse.totalEstimatedCost;
                                     
                                     MainMenu.checkedIngredients = new java.util.ArrayList<>();
                                     for(int i = 0; i < aiResponse.ingredients.size(); i++) {
