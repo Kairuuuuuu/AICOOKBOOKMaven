@@ -4,15 +4,21 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
+import java.util.List;
+import java.util.ArrayList;
 
 public class MainMenu {
 
     public static JFrame frame;
     public static JLabel missingLabel; 
+    public static JLabel mealLabel; 
     
-    // 🌟 This variable stores the state so it doesn't reset when leaving the screen!
-    // It will only reset when you completely close and restart the Java program.
-    public static String savedMissingIngredients = "Missing:  Coconut Milk, Thai Chilies";
+    // 🌟 THE MEMORY BANK
+    public static String currentRecipeName = "No meal selected";
+    public static String currentRecipeImagePath = "default_food.jpg"; 
+    public static List<String> currentIngredients = new ArrayList<>();
+    public static List<Boolean> checkedIngredients = new ArrayList<>();
+    public static String savedMissingIngredients = "Missing: 0 items"; 
 
     public static void showMenu() {
         frame = new JFrame("Dirk's CookBook - Main Menu");
@@ -20,7 +26,6 @@ public class MainMenu {
         frame.setSize(390, 844); 
         frame.setLocationRelativeTo(null); 
 
-        // 🌟 BULLETPROOF BACKGROUND & FADE
         JPanel mainContent = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -33,7 +38,6 @@ public class MainMenu {
                     }
                 } catch (Exception e) {}
                 
-                // Draw the fade overlay directly over the image
                 g.setColor(new Color(245, 245, 245, 120)); 
                 g.fillRect(0, 0, getWidth(), getHeight());
             }
@@ -80,6 +84,7 @@ public class MainMenu {
 
         frame.add(topBar);
 
+        // --- CARD 1: Generate Meal ---
         RoundPanel card1 = new RoundPanel();
         card1.setBounds(25, 120, 325, 120);
         card1.setLayout(null);
@@ -102,44 +107,9 @@ public class MainMenu {
 
         frame.add(card1);
 
-        RoundPanel card2 = new RoundPanel();
-        card2.setBounds(25, 255, 325, 185);
-        card2.setLayout(null);
-
-        JLabel suggText = new JLabel("Suggested For You");
-        suggText.setFont(new Font("SansSerif", Font.PLAIN, 16));
-        suggText.setBounds(15, 15, 200, 20);
-        card2.add(suggText);
-
-        RoundImagePanel food1 = new RoundImagePanel("food1.jpg");
-        food1.setBounds(15, 45, 90, 80);
-        card2.add(food1);
-        JLabel f1Title = new JLabel("Creamy Spinach", SwingConstants.CENTER);
-        f1Title.setFont(new Font("SansSerif", Font.BOLD, 10));
-        f1Title.setBounds(15, 130, 90, 15);
-        card2.add(f1Title);
-
-        RoundImagePanel food2 = new RoundImagePanel("food2.jpg");
-        food2.setBounds(117, 45, 90, 80);
-        card2.add(food2);
-        JLabel f2Title = new JLabel("Kaldereta", SwingConstants.CENTER);
-        f2Title.setFont(new Font("SansSerif", Font.BOLD, 10));
-        f2Title.setBounds(117, 130, 90, 15);
-        card2.add(f2Title);
-
-        RoundImagePanel food3 = new RoundImagePanel("food3.jpg");
-        food3.setBounds(220, 45, 90, 80);
-        card2.add(food3);
-        JLabel f3Title = new JLabel("Chicken Curry", SwingConstants.CENTER);
-        f3Title.setFont(new Font("SansSerif", Font.BOLD, 10));
-        f3Title.setBounds(220, 130, 90, 15);
-        card2.add(f3Title);
-
-        frame.add(card2);
-
-        // 🌟 Shopping List Card
+        // --- CARD 3: Shopping List ---
         RoundPanel card3 = new RoundPanel();
-        card3.setBounds(25, 455, 325, 170); 
+        card3.setBounds(25, 255, 325, 440); 
         card3.setLayout(null);
 
         JLabel shopTitle = new JLabel("🛒 Shopping List");
@@ -148,32 +118,113 @@ public class MainMenu {
         shopTitle.setBounds(15, 15, 200, 25);
         card3.add(shopTitle);
 
-        JLabel mealLabel = new JLabel("Selected Meal: Thai Green Curry");
+        JLabel mealLabelTitle = new JLabel("Selected Meal:");
+        mealLabelTitle.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        mealLabelTitle.setForeground(Color.DARK_GRAY);
+        mealLabelTitle.setBounds(15, 45, 180, 20);
+        card3.add(mealLabelTitle);
+
+        mealLabel = new JLabel(currentRecipeName);
         mealLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         mealLabel.setForeground(Color.BLACK);
-        mealLabel.setBounds(15, 50, 300, 20);
+        mealLabel.setBounds(15, 65, 180, 20);
         card3.add(mealLabel);
 
-        // 🌟 LOAD THE SAVED STATE: We use savedMissingIngredients here!
+        RoundImagePanel mealImage = new RoundImagePanel(currentRecipeImagePath); 
+        mealImage.setBounds(215, 40, 90, 75);
+        card3.add(mealImage);
+
         missingLabel = new JLabel(savedMissingIngredients);
         missingLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         missingLabel.setForeground(Color.BLACK);
-        missingLabel.setBounds(15, 75, 300, 20);
+        missingLabel.setBounds(15, 100, 300, 20);
         card3.add(missingLabel);
 
-        JLabel budgetLabel = new JLabel("Budget: [=====Php 300=====]");
-        budgetLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        budgetLabel.setForeground(Color.BLACK);
-        budgetLabel.setBounds(15, 100, 300, 20);
-        card3.add(budgetLabel);
+        AnimatedButton doneBtn = new AnimatedButton("Done", false);
+        doneBtn.setBounds(100, 395, 135, 30); 
+        doneBtn.addActionListener(e -> {
+            int missingCount = 0;
+            for (Boolean isChecked : checkedIngredients) {
+                if (!isChecked) {
+                    missingCount++;
+                }
+            }
+            savedMissingIngredients = "Missing: " + missingCount + " items";
+            Point loc = frame.getLocation(); 
+            frame.dispose(); 
+            showMenu(); 
+            frame.setLocation(loc); 
+        });
 
-        AnimatedButton viewListBtn = new AnimatedButton("View Full List", false);
-        viewListBtn.setBounds(20, 130, 285, 30);
-        viewListBtn.addActionListener(e -> ShoppingList.showShoppingList(frame));
-        card3.add(viewListBtn);
+        // --- SCROLLABLE INGREDIENTS VIEW ---
+        JPanel listPanel = new JPanel();
+        listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
+        listPanel.setOpaque(false);
+        listPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 15)); 
+
+        if (currentIngredients.isEmpty()) {
+            JLabel emptyLabel = new JLabel("List is empty. Generate a meal!");
+            emptyLabel.setFont(new Font("SansSerif", Font.ITALIC, 13));
+            emptyLabel.setForeground(Color.GRAY);
+            emptyLabel.setBorder(BorderFactory.createEmptyBorder(10, 5, 0, 0));
+            listPanel.add(emptyLabel);
+        } else {
+            for (int i = 0; i < currentIngredients.size(); i++) {
+                final int index = i; 
+                
+                String wrappedText = "<html><body style='width: 190px'>" + currentIngredients.get(i) + "</body></html>";
+                JCheckBox cb = new JCheckBox(wrappedText);
+                cb.setFont(new Font("SansSerif", Font.BOLD, 13)); 
+                cb.setOpaque(false);
+                cb.setFocusPainted(false);
+                cb.setIconTextGap(8); 
+                
+                cb.setIcon(new CustomCheckBoxIcon(false));
+                cb.setSelectedIcon(new CustomCheckBoxIcon(true));
+
+                if (index < checkedIngredients.size() && checkedIngredients.get(index)) {
+                    cb.setSelected(true);
+                }
+                
+                // When a checkbox is clicked, update the array AND check if the Done button should unlock
+                cb.addItemListener(e -> {
+                    if (index < checkedIngredients.size()) {
+                        checkedIngredients.set(index, e.getStateChange() == ItemEvent.SELECTED);
+                    }
+                    // Checks if ALL boxes are true. (If it doesn't contain a 'false', then all are true)
+                    boolean allChecked = !checkedIngredients.isEmpty() && !checkedIngredients.contains(false);
+                    doneBtn.setEnabled(allChecked); 
+                    doneBtn.setSolid(allChecked); 
+                });
+
+                listPanel.add(cb);
+                listPanel.add(Box.createRigidArea(new Dimension(0, 10))); 
+            }
+        }
+
+        JScrollPane listScroll = new JScrollPane(listPanel);
+        listScroll.setBounds(15, 130, 295, 255); 
+        listScroll.setOpaque(false);
+        listScroll.getViewport().setOpaque(false);
+        listScroll.setBorder(null); 
+        
+        listScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        listScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        listScroll.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
+        listScroll.getVerticalScrollBar().setUnitIncrement(25); 
+        
+        card3.add(listScroll);
+
+        // Set the initial status of the Done button when the menu first loads
+        boolean initialAllChecked = !checkedIngredients.isEmpty() && !checkedIngredients.contains(false);
+        doneBtn.setEnabled(initialAllChecked);
+        doneBtn.setSolid(initialAllChecked);
+        card3.add(doneBtn);
+
 
         frame.add(card3);
 
+        // --- BOTTOM NAVIGATION ---
         JPanel bottomNav = new JPanel();
         bottomNav.setBounds(0, 720, 390, 90);
         bottomNav.setBackground(darkGreen);
@@ -183,7 +234,6 @@ public class MainMenu {
         homeTab.setBounds(45, 10, 60, 60);
         bottomNav.add(homeTab);
 
-        // 🌟 Reverted to original navigation style
         NavItem pantryTab = new NavItem("📋", "My Pantry", false); 
         pantryTab.setBounds(165, 10, 60, 60);
         pantryTab.addMouseListener(new MouseAdapter() {
@@ -196,7 +246,6 @@ public class MainMenu {
         });
         bottomNav.add(pantryTab);
 
-        // 🌟 Reverted to original navigation style
         NavItem chatTab = new NavItem("💬", "AI Chat", false);
         chatTab.setBounds(280, 10, 60, 60);
         chatTab.addMouseListener(new MouseAdapter() {
@@ -214,6 +263,44 @@ public class MainMenu {
         frame.setVisible(true);
     }
 
+    // --- Custom Flat Checkbox Icon ---
+    static class CustomCheckBoxIcon implements Icon {
+        private final boolean selected;
+        private final int size = 18; 
+        private final Color darkGreen = new Color(14, 71, 17);
+
+        public CustomCheckBoxIcon(boolean selected) {
+            this.selected = selected;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int drawY = y + 1; 
+
+            if (selected) {
+                g2.setColor(darkGreen);
+                g2.fillRoundRect(x, drawY, size, size, 4, 4);
+                
+                g2.setColor(Color.WHITE);
+                g2.setStroke(new BasicStroke(2.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawLine(x + 4, drawY + 9, x + 8, drawY + 13);
+                g2.drawLine(x + 8, drawY + 13, x + 14, drawY + 5);
+            } else {
+                g2.setColor(Color.WHITE);
+                g2.fillRoundRect(x, drawY, size, size, 4, 4);
+                
+                g2.setColor(darkGreen);
+                g2.drawRoundRect(x, drawY, size, size, 4, 4);
+            }
+            g2.dispose();
+        }
+
+        @Override public int getIconWidth() { return size; }
+        @Override public int getIconHeight() { return size + 2; }
+    }
+
     public static class RoundPanel extends JPanel {
         public RoundPanel() { setOpaque(false); }
         protected void paintComponent(Graphics g) {
@@ -226,17 +313,14 @@ public class MainMenu {
     public static class RoundTextField extends JTextField {
         private String placeholder;
         public RoundTextField(String placeholder) { 
-            this.placeholder = placeholder; 
-            setOpaque(false); 
-            setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10)); 
+            this.placeholder = placeholder; setOpaque(false); setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10)); 
             addFocusListener(new FocusAdapter() {
                 public void focusGained(FocusEvent e) { if (getText().equals(placeholder)) { setText(""); setForeground(Color.BLACK); } }
                 public void focusLost(FocusEvent e) { if (getText().isEmpty()) { setForeground(Color.GRAY); setText(placeholder); } }
             });
         }
         protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g; 
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g.setColor(Color.WHITE); g.fillRoundRect(0, 0, getWidth()-1, getHeight()-1, 15, 15);
             g.setColor(new Color(14, 71, 17)); g.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, 15, 15);
             super.paintComponent(g);
@@ -248,50 +332,84 @@ public class MainMenu {
         }
     }
     
+    // --- UPDATED: Animated Button now supports disabled state (Grayed out) ---
     public static class AnimatedButton extends JButton {
         int shrink = 0; boolean isSolid;
         public AnimatedButton(String text, boolean isSolid) {
-            super(text); this.isSolid = isSolid;
-            setContentAreaFilled(false); setBorderPainted(false); setFocusPainted(false);
-            if(isSolid) setForeground(Color.WHITE); else setForeground(new Color(14, 71, 17));
+            super(text); this.isSolid = isSolid; setContentAreaFilled(false); setBorderPainted(false); setFocusPainted(false);
             setFont(new Font("SansSerif", Font.BOLD, 14));
+            updateTextColor();
             addMouseListener(new MouseAdapter() {
-                public void mousePressed(MouseEvent e) { shrink = 2; repaint(); } 
-                public void mouseReleased(MouseEvent e) { shrink = 0; repaint(); } 
+                public void mousePressed(MouseEvent e) { if(isEnabled()) { shrink = 2; repaint(); } } 
+                public void mouseReleased(MouseEvent e) { if(isEnabled()) { shrink = 0; repaint(); } } 
             });
         }
+        
+        public void setSolid(boolean isSolid) {
+            this.isSolid = isSolid;
+            updateTextColor();
+            repaint();
+        }
+
+        @Override
+        public void setEnabled(boolean enabled) {
+            super.setEnabled(enabled);
+            updateTextColor();
+            repaint();
+        }
+
+        private void updateTextColor() {
+            if (!isEnabled()) setForeground(Color.GRAY);
+            else if (isSolid) setForeground(Color.WHITE); 
+            else setForeground(new Color(14, 71, 17));
+        }
+
         protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g;
+            Graphics2D g2 = (Graphics2D) g; 
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            if (shrink > 0) g2.translate(shrink, shrink);
-            if (isSolid) { g.setColor(new Color(14, 71, 17)); g.fillRoundRect(0, 0, getWidth()-1-(shrink*2), getHeight()-1-(shrink*2), 30, 30); } 
-            else { g.setColor(Color.WHITE); g.fillRoundRect(0, 0, getWidth()-1-(shrink*2), getHeight()-1-(shrink*2), 30, 30); g.setColor(new Color(14, 71, 17)); g.drawRoundRect(0, 0, getWidth()-1-(shrink*2), getHeight()-1-(shrink*2), 30, 30); }
+            
+            int currentShrink = (isEnabled() && shrink > 0) ? shrink : 0;
+            if (currentShrink > 0) g2.translate(currentShrink, currentShrink);
+
+            // Draws Gray if disabled, Green if Solid, White if Outlined
+            if (!isEnabled()) {
+                g.setColor(new Color(220, 220, 220));
+                g.fillRoundRect(0, 0, getWidth()-1-(currentShrink*2), getHeight()-1-(currentShrink*2), 30, 30);
+            } else if (isSolid) { 
+                g.setColor(new Color(14, 71, 17)); 
+                g.fillRoundRect(0, 0, getWidth()-1-(currentShrink*2), getHeight()-1-(currentShrink*2), 30, 30); 
+            } else { 
+                g.setColor(Color.WHITE); 
+                g.fillRoundRect(0, 0, getWidth()-1-(currentShrink*2), getHeight()-1-(currentShrink*2), 30, 30); 
+                g.setColor(new Color(14, 71, 17)); 
+                g.drawRoundRect(0, 0, getWidth()-1-(currentShrink*2), getHeight()-1-(currentShrink*2), 30, 30); 
+            }
             super.paintComponent(g);
-            if (shrink > 0) g2.translate(-shrink, -shrink);
+            if (currentShrink > 0) g2.translate(-currentShrink, -currentShrink);
         }
     }
 
     static class RoundImagePanel extends JPanel {
         Image image;
-        public RoundImagePanel(String imagePath) {
-            setOpaque(false);
+        public RoundImagePanel(String imagePath) { 
+            setOpaque(false); 
             try { 
-                ImageIcon icon = new ImageIcon(imagePath);
-                if (icon.getIconWidth() != -1) image = icon.getImage();
-            } catch (Exception e) {}
+                ImageIcon icon = new ImageIcon(imagePath); 
+                if (icon.getIconWidth() != -1) image = icon.getImage(); 
+            } catch (Exception e) {} 
         }
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setColor(Color.LIGHT_GRAY); g2.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15);
-            if (image != null) {
-                Shape oldClip = g2.getClip();
-                g2.setClip(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15));
-                g2.drawImage(image, 0, 0, getWidth(), getHeight(), this);
-                g2.setClip(oldClip);
-            } else {
-                g2.setColor(Color.DARK_GRAY);
-                g2.setFont(new Font("SansSerif", Font.PLAIN, 24));
-                g2.drawString("📷", getWidth()/2 - 12, getHeight()/2 + 8);
+            if (image != null) { 
+                Shape oldClip = g2.getClip(); 
+                g2.setClip(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 15, 15)); 
+                g2.drawImage(image, 0, 0, getWidth(), getHeight(), this); 
+                g2.setClip(oldClip); 
+            } else { 
+                g2.setColor(Color.DARK_GRAY); 
+                g2.setFont(new Font("SansSerif", Font.PLAIN, 24)); 
+                g2.drawString("📷", getWidth()/2 - 12, getHeight()/2 + 8); 
             }
         }
     }
@@ -310,12 +428,10 @@ public class MainMenu {
         public NavItem(String iconText, String titleText, boolean isActive) {
             this.isActive = isActive; setOpaque(false); setLayout(null);
             JLabel icon = new JLabel(iconText, SwingConstants.CENTER); icon.setFont(new Font("SansSerif", Font.PLAIN, 24)); icon.setForeground(Color.WHITE); icon.setBounds(0, 8, 60, 30); add(icon);
-            JLabel title = new JLabel(titleText, SwingConstants.CENTER); title.setFont(new Font("SansSerif", Font.PLAIN, 10)); title.setForeground(Color.WHITE); title.setBounds(0, 38, 60, 15); add(title);
-            setCursor(new Cursor(Cursor.HAND_CURSOR));
+            JLabel title = new JLabel(titleText, SwingConstants.CENTER); title.setFont(new Font("SansSerif", Font.PLAIN, 10)); title.setForeground(Color.WHITE); title.setBounds(0, 38, 60, 15); add(title); setCursor(new Cursor(Cursor.HAND_CURSOR));
         }
         protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            if (isActive) { Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON); g2.setColor(new Color(255, 255, 255, 60)); g2.fillOval(3, 3, 54, 54); }
+            super.paintComponent(g); if (isActive) { Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON); g2.setColor(new Color(255, 255, 255, 60)); g2.fillOval(3, 3, 54, 54); }
         }
     }
 }

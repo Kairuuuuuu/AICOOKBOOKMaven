@@ -3,7 +3,6 @@ package cookbook;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.RoundRectangle2D;
 
 public class PantryScreen {
 
@@ -17,7 +16,6 @@ public class PantryScreen {
         frame.setSize(390, 844); 
         frame.setLocationRelativeTo(null); 
 
-        // 🌟 BULLETPROOF BACKGROUND & FADE
         JPanel mainContent = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -87,14 +85,27 @@ public class PantryScreen {
         frame.add(searchBar);
 
         pantryGrid = new JPanel();
-        pantryGrid.setBounds(0, 175, 390, 545);
         pantryGrid.setOpaque(false);
         pantryGrid.setLayout(null); 
-        frame.add(pantryGrid);
+        pantryGrid.setPreferredSize(new Dimension(390, 545)); 
+        
+        JScrollPane pantryScroll = new JScrollPane(pantryGrid);
+        pantryScroll.setBounds(0, 175, 390, 545);
+        pantryScroll.setOpaque(false);
+        pantryScroll.getViewport().setOpaque(false);
+        pantryScroll.setBorder(null);
+        pantryScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        pantryScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        pantryScroll.getVerticalScrollBar().setUnitIncrement(16);
+        pantryScroll.getVerticalScrollBar().setPreferredSize(new Dimension(0, 0));
+
+        frame.add(pantryScroll);
 
         FloatingAddButton fab = new FloatingAddButton();
         fab.setBounds(285, 630, 65, 65);
         frame.add(fab);
+        
+        frame.getContentPane().setComponentZOrder(fab, 0);
 
         fab.addActionListener(e -> {
             glassPane.setVisible(true);
@@ -229,10 +240,14 @@ public class PantryScreen {
         newCard.setBounds(xPos, yPos, 155, 155);
         
         pantryGrid.add(newCard);
+        itemCount++; 
+        
+        int rows = (itemCount + 1) / 2;
+        int requiredHeight = Math.max(545, rows * 170 + 20); 
+        pantryGrid.setPreferredSize(new Dimension(390, requiredHeight));
+        
         pantryGrid.revalidate(); 
         pantryGrid.repaint();    
-
-        itemCount++; 
     }
 
     static class PantryCard extends JPanel {
