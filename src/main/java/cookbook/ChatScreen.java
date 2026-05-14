@@ -4,6 +4,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ChatScreen {
 
@@ -129,6 +131,8 @@ public class ChatScreen {
             String message = inputField.getText().trim();
             if (!message.isEmpty() && !message.equals("Type a message...")) {
                 
+                boolean bypassBudget = message.contains("ingredients I have in my pantry");
+                
                 chatHistoryPanel.add(new ChatBubble(message, true));
                 chatHistoryPanel.add(Box.createRigidArea(new Dimension(0, 15)));
                 inputField.setText("");
@@ -143,7 +147,13 @@ public class ChatScreen {
                 scrollToBottom(scrollPane);
 
                 new Thread(() -> {
-                    AIChatBot.ParsedResponse aiResponse = AIChatBot.askChefAI(message);
+                    String finalMessage = message;
+                    if (bypassBudget) {
+                        finalMessage += " [SYSTEM NOTE: Since I am using ingredients from my pantry, IGNORE any budget limits for this specific recipe.]";
+                    }
+                    finalMessage = finalMessage.replace("\n", " ").replace("\r", "");
+                    
+                    AIChatBot.ParsedResponse aiResponse = AIChatBot.askChefAI(finalMessage);
                     
                     SwingUtilities.invokeLater(() -> {
                         chatHistoryPanel.remove(thinkingBubble);
@@ -164,14 +174,12 @@ public class ChatScreen {
                             
                             addToListBtn.addActionListener(evt -> {
                                 
-                                // 🌟 1. FRESHLY FETCH THE BUDGET EXACTLY WHEN CLICKED
                                 double checkBudget = 0.0;
                                 try {
                                     checkBudget = Double.parseDouble(MainMenu.currentBudget.replace("Php", "").replace(",", "").trim());
                                 } catch (Exception ex) {}
 
-                                // 🌟 2. CHECK IF BUDGET IS 0
-                                if (checkBudget <= 0.0) {
+                                if (!bypassBudget && checkBudget <= 0.0) {
                                     JDialog warningDialog = new JDialog(ChatScreen.frame, true);
                                     warningDialog.setUndecorated(true);
                                     warningDialog.setBackground(new Color(0, 0, 0, 0));
@@ -222,8 +230,7 @@ public class ChatScreen {
                                     return; 
                                 }
 
-                                // 🌟 3. NEW CHECK: OVER BUDGET WARNING
-                                if (aiResponse.totalEstimatedCost > checkBudget) {
+                                if (!bypassBudget && aiResponse.totalEstimatedCost > checkBudget) {
                                     JDialog warningDialog = new JDialog(ChatScreen.frame, true);
                                     warningDialog.setUndecorated(true);
                                     warningDialog.setBackground(new Color(0, 0, 0, 0));
@@ -250,13 +257,13 @@ public class ChatScreen {
                                             g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 20, 20);
                                         }
                                     };
-                                    warnPopup.setBounds(45, 350, 300, 160); // Slightly taller for extra text
+                                    warnPopup.setBounds(45, 350, 300, 160); 
                                     warnPopup.setOpaque(false);
                                     warnOverlay.add(warnPopup);
 
                                     JLabel warnLabel = new JLabel("<html><center>Insufficient Budget!<br>This recipe costs Php " + String.format("%.2f", aiResponse.totalEstimatedCost) + "<br>Your budget is only Php " + String.format("%.2f", checkBudget) + "</center></html>", SwingConstants.CENTER);
                                     warnLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
-                                    warnLabel.setForeground(Color.RED); // Visually distinct error
+                                    warnLabel.setForeground(Color.RED); 
                                     warnLabel.setBounds(10, 20, 280, 60);
                                     warnPopup.add(warnLabel);
 
@@ -271,10 +278,9 @@ public class ChatScreen {
                                     warnPopup.add(okBtn);
 
                                     warningDialog.setVisible(true);
-                                    return; // STOPS THEM FROM ADDING IT
+                                    return; 
                                 }
 
-                                // 4. IF ALL CHECKS PASS, PROCEED NORMALLY
                                 JDialog confirmDialog = new JDialog(ChatScreen.frame, true);
                                 confirmDialog.setUndecorated(true);
                                 confirmDialog.setBackground(new Color(0, 0, 0, 0));
@@ -324,6 +330,8 @@ public class ChatScreen {
                                     MainMenu.currentRecipeName = aiResponse.recipeName;
                                     MainMenu.currentIngredients = aiResponse.ingredients;
                                     MainMenu.currentTotalCost = aiResponse.totalEstimatedCost;
+                                    MainMenu.currentCalories = aiResponse.calories;
+                                    MainMenu.currentProtein = aiResponse.protein;
                                     
                                     MainMenu.checkedIngredients = new java.util.ArrayList<>();
                                     for(int i = 0; i < aiResponse.ingredients.size(); i++) {
@@ -332,6 +340,20 @@ public class ChatScreen {
                                     
                                     MainMenu.savedMissingIngredients = "Missing: " + aiResponse.ingredients.size() + " items";
                                     
+                                    // 🌟 NEW LOGIC: DEDUCT FROM PANTRY
+                                    List<PantryScreen.PantryItem> itemsToRemove = new ArrayList<>();
+                                    for (String recipeIng : aiResponse.ingredients) {
+                                        String lowerReq = recipeIng.toLowerCase();
+                                        for (PantryScreen.PantryItem pItem : PantryScreen.savedPantryItems) {
+                                            if (lowerReq.contains(pItem.name.toLowerCase())) {
+                                                if (!itemsToRemove.contains(pItem)) {
+                                                    itemsToRemove.add(pItem); // Mark matched item for deletion
+                                                }
+                                            }
+                                        }
+                                    }
+                                    PantryScreen.savedPantryItems.removeAll(itemsToRemove); // Completely remove them from the Pantry!
+
                                     buttonPanel.setVisible(false);
                                     chatHistoryPanel.revalidate();
                                     chatHistoryPanel.repaint();
@@ -352,8 +374,8 @@ public class ChatScreen {
                                     };
                                     toastPanel.setOpaque(false);
                                     
-                                    JLabel toastLabel = new JLabel("✓ Successfully added to list!", SwingConstants.CENTER);
-                                    toastLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+                                    JLabel toastLabel = new JLabel("✓ Successfully added & deducted from Pantry!", SwingConstants.CENTER);
+                                    toastLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
                                     toastLabel.setForeground(Color.WHITE);
                                     toastPanel.add(toastLabel, BorderLayout.CENTER);
                                     
@@ -423,7 +445,18 @@ public class ChatScreen {
 
         frame.add(bottomNav);
 
-        if (isFirstLoad) {
+        frame.setVisible(true);
+
+        if (MainMenu.pendingPantryPrompt != null && !MainMenu.pendingPantryPrompt.isEmpty()) {
+            String autoPrompt = MainMenu.pendingPantryPrompt;
+            MainMenu.pendingPantryPrompt = ""; 
+            
+            SwingUtilities.invokeLater(() -> {
+                inputField.setText(autoPrompt);
+                inputField.setForeground(Color.BLACK);
+                sendBtn.doClick(); 
+            });
+        } else if (isFirstLoad) {
             SwingUtilities.invokeLater(() -> {
                 Timer initialGreeting = new Timer(500, evt -> {
                     chatHistoryPanel.add(new ChatBubble("Welcome back Kyle! 👋 I can help you with recipes, pantry management, or meal planning. What's on your mind today?", false));
@@ -442,8 +475,6 @@ public class ChatScreen {
                 inputField.requestFocusInWindow();
             });
         }
-
-        frame.setVisible(true);
     }
 
     private static void scrollToBottom(JScrollPane scrollPane) {

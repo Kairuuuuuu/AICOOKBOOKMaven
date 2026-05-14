@@ -13,6 +13,7 @@ public class MainMenu {
     public static JLabel missingLabel; 
     public static JLabel mealLabel; 
     public static JLabel budgetLabel; 
+    public static JLabel nutritionLabel; 
     
     // 🌟 THE MEMORY BANK
     public static String currentRecipeName = "No meal selected";
@@ -21,6 +22,11 @@ public class MainMenu {
     public static String savedMissingIngredients = "Missing: 0 items"; 
     public static String currentBudget = "Php 0.00"; 
     public static double currentTotalCost = 0.0; 
+    
+    public static String currentCalories = "0 kcal"; 
+    public static String currentProtein = "0g";
+
+    public static String pendingPantryPrompt = ""; 
 
     public static void showMenu() {
         frame = new JFrame("Dirk's CookBook - Main Menu");
@@ -49,6 +55,7 @@ public class MainMenu {
 
         Color darkGreen = new Color(14, 71, 17);
 
+        // --- TOP BAR ---
         JPanel topBar = new JPanel();
         topBar.setBounds(0, 0, 390, 100);
         topBar.setBackground(Color.WHITE);
@@ -86,8 +93,9 @@ public class MainMenu {
 
         frame.add(topBar);
 
+        // --- CARD 1: Generate Meal ---
         RoundPanel card1 = new RoundPanel();
-        card1.setBounds(25, 120, 325, 120);
+        card1.setBounds(25, 120, 325, 125); // Slightly taller to fit the error message
         card1.setLayout(null);
 
         JLabel genText1 = new JLabel("Generate Your Next Meal,");
@@ -103,11 +111,47 @@ public class MainMenu {
         card1.add(genText2);
 
         AnimatedButton genButton = new AnimatedButton("Generate from My Pantry  📖", true);
-        genButton.setBounds(20, 65, 285, 40);
-        card1.add(genButton);
+        genButton.setBounds(20, 65, 285, 35); // Slightly smaller height
+        
+        // 🌟 NEW: INLINE UI ERROR MESSAGE (Hidden by default)
+        JLabel emptyPantryWarning = new JLabel("", SwingConstants.CENTER);
+        emptyPantryWarning.setFont(new Font("SansSerif", Font.BOLD, 12));
+        emptyPantryWarning.setForeground(new Color(200, 50, 50)); // Red warning text
+        emptyPantryWarning.setBounds(20, 102, 285, 20);
+        card1.add(emptyPantryWarning);
 
+        genButton.addActionListener(e -> {
+            // 🌟 NEW: CHECK IF PANTRY IS EMPTY
+            if (PantryScreen.savedPantryItems.isEmpty()) {
+                emptyPantryWarning.setText("Your pantry is empty! Add items first.");
+                return; // Stop the code right here, do NOT redirect to chat
+            } 
+            
+            // If we have items, clear the warning and proceed
+            emptyPantryWarning.setText("");
+            
+            StringBuilder autoPrompt = new StringBuilder("Please generate a recipe using some of these ingredients I have in my pantry: ");
+            
+            for (int i = 0; i < PantryScreen.savedPantryItems.size(); i++) {
+                autoPrompt.append(PantryScreen.savedPantryItems.get(i).name);
+                if (i < PantryScreen.savedPantryItems.size() - 1) {
+                    autoPrompt.append(", ");
+                }
+            }
+            
+            // Save the prompt to memory and redirect
+            pendingPantryPrompt = autoPrompt.toString();
+            
+            Point loc = frame.getLocation(); 
+            frame.dispose(); 
+            ChatScreen.showChat(); 
+            ChatScreen.frame.setLocation(loc); 
+        });
+        
+        card1.add(genButton);
         frame.add(card1);
 
+        // --- CARD 3: Shopping List ---
         RoundPanel card3 = new RoundPanel();
         card3.setBounds(25, 255, 325, 440); 
         card3.setLayout(null);
@@ -118,19 +162,15 @@ public class MainMenu {
         shopTitle.setBounds(15, 15, 200, 25);
         card3.add(shopTitle);
 
-        // 🌟 NEW: THE TRASH CAN ICON
-        // Only shows up if a meal is actually selected
         if (!currentRecipeName.equals("No meal selected")) {
             JLabel trashBtn = new JLabel("🗑");
             trashBtn.setFont(new Font("SansSerif", Font.PLAIN, 22));
-            trashBtn.setForeground(new Color(200, 50, 50)); // Red color
+            trashBtn.setForeground(new Color(200, 50, 50)); 
             trashBtn.setBounds(285, 15, 30, 30);
             trashBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
             
             trashBtn.addMouseListener(new MouseAdapter() {
                 public void mousePressed(MouseEvent e) {
-                    
-                    // 🌟 CONFIRMATION POPUP
                     JDialog confirmDialog = new JDialog(MainMenu.frame, true);
                     confirmDialog.setUndecorated(true);
                     confirmDialog.setBackground(new Color(0, 0, 0, 0));
@@ -169,13 +209,12 @@ public class MainMenu {
 
                     JButton yesBtn = new JButton("Yes");
                     yesBtn.setBounds(40, 90, 90, 35);
-                    yesBtn.setBackground(new Color(200, 50, 50)); // Red button for deletion
+                    yesBtn.setBackground(new Color(200, 50, 50)); 
                     yesBtn.setForeground(Color.WHITE);
                     yesBtn.setFocusPainted(false);
                     yesBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
                     yesBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
                     
-                    // IF YES: Wipe everything and reload the menu
                     yesBtn.addActionListener(eYes -> {
                         confirmDialog.dispose();
                         currentRecipeName = "No meal selected";
@@ -183,6 +222,8 @@ public class MainMenu {
                         checkedIngredients.clear();
                         savedMissingIngredients = "Missing: 0 items";
                         currentTotalCost = 0.0;
+                        currentCalories = "0 kcal"; 
+                        currentProtein = "0g";
                         
                         Point loc = frame.getLocation(); 
                         frame.dispose(); 
@@ -229,9 +270,7 @@ public class MainMenu {
         totalCostLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
         
         double numericBudget = 0.0;
-        try {
-            numericBudget = Double.parseDouble(currentBudget.replace("Php", "").replace(",", "").trim());
-        } catch (Exception e) {}
+        try { numericBudget = Double.parseDouble(currentBudget.replace("Php", "").replace(",", "").trim()); } catch (Exception e) {}
         
         if (currentTotalCost > numericBudget && numericBudget > 0) {
             totalCostLabel.setForeground(Color.RED);
@@ -241,10 +280,16 @@ public class MainMenu {
         totalCostLabel.setBounds(15, 105, 300, 20);
         card3.add(totalCostLabel);
 
+        nutritionLabel = new JLabel("💪 Calories: " + currentCalories + " | Protein: " + currentProtein);
+        nutritionLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        nutritionLabel.setForeground(Color.DARK_GRAY);
+        nutritionLabel.setBounds(15, 125, 300, 20);
+        card3.add(nutritionLabel);
+
         missingLabel = new JLabel(savedMissingIngredients);
         missingLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         missingLabel.setForeground(Color.BLACK);
-        missingLabel.setBounds(15, 125, 300, 20);
+        missingLabel.setBounds(15, 145, 300, 20);
         card3.add(missingLabel);
 
         AnimatedButton doneBtn = new AnimatedButton("Done", false);
@@ -255,6 +300,8 @@ public class MainMenu {
             checkedIngredients.clear();
             savedMissingIngredients = "Missing: 0 items";
             currentTotalCost = 0.0; 
+            currentCalories = "0 kcal"; 
+            currentProtein = "0g";
             
             Point loc = frame.getLocation(); 
             frame.dispose(); 
@@ -262,7 +309,6 @@ public class MainMenu {
             frame.setLocation(loc); 
         });
 
-        // --- SCROLLABLE INGREDIENTS VIEW ---
         JPanel listPanel = new JPanel();
         listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
         listPanel.setOpaque(false);
@@ -307,11 +353,10 @@ public class MainMenu {
         }
 
         JScrollPane listScroll = new JScrollPane(listPanel);
-        listScroll.setBounds(15, 155, 295, 230); 
+        listScroll.setBounds(15, 170, 295, 215); 
         listScroll.setOpaque(false);
         listScroll.getViewport().setOpaque(false);
         listScroll.setBorder(null); 
-        
         listScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         listScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         listScroll.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
@@ -361,11 +406,12 @@ public class MainMenu {
         bottomNav.add(chatTab);
 
         frame.add(bottomNav);
-
         frame.setVisible(true);
     }
 
-    static class CustomCheckBoxIcon implements Icon {
+    // --- Component Classes ---
+
+    public static class CustomCheckBoxIcon implements Icon {
         private final boolean selected;
         private final int size = 18; 
         private final Color darkGreen = new Color(14, 71, 17);
@@ -488,7 +534,7 @@ public class MainMenu {
         }
     }
 
-    static class RoundDollarIcon extends JPanel {
+    public static class RoundDollarIcon extends JPanel {
         public RoundDollarIcon() { setOpaque(false); }
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g; g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -497,7 +543,7 @@ public class MainMenu {
         }
     }
 
-    static class NavItem extends JPanel {
+    public static class NavItem extends JPanel {
         boolean isActive;
         public NavItem(String iconText, String titleText, boolean isActive) {
             this.isActive = isActive; setOpaque(false); setLayout(null);

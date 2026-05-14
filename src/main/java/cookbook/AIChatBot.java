@@ -20,6 +20,9 @@ public class AIChatBot {
         public List<String> ingredients;
         public boolean hasRecipe;
         public double totalEstimatedCost; 
+        // 🌟 NEW: Variables to hold nutrition info
+        public String calories;
+        public String protein;
     }
 
     public static ParsedResponse askChefAI(String userMessage) {
@@ -28,6 +31,8 @@ public class AIChatBot {
         result.hasRecipe = false;
         result.recipeName = "AI Suggested Recipe"; 
         result.totalEstimatedCost = 0.0;
+        result.calories = "0 kcal";
+        result.protein = "0g";
 
         try {
             HttpClient client = HttpClient.newHttpClient();
@@ -38,7 +43,6 @@ public class AIChatBot {
                 currentBudget = Double.parseDouble(budgetStr);
             } catch (Exception e) {}
 
-            // 🌟 RELAXED BUDGET INSTRUCTION: AI will try to stay under budget but won't refuse to output the recipe.
             String budgetInstruction = "";
             if (currentBudget > 0) {
                 budgetInstruction = "The user has a budget of Php " + currentBudget + ". "
@@ -46,13 +50,16 @@ public class AIChatBot {
                         + "However, ALWAYS output the recipe and ingredients block even if it goes slightly over budget.";
             }
 
+            // 🌟 UPDATED: Added rule #4 for Nutrition extraction
             String systemPrompt = "You are a Filipino AI chef. " + budgetInstruction + "\\n\\n"
                     + "CRITICAL RULES IF PROVIDING A RECIPE:\\n"
                     + "1. The VERY FIRST LINE MUST be exactly 'RECIPE_NAME: ' followed by the dish name.\\n"
                     + "2. You MUST wrap ingredients EXACTLY like this:\\n"
                     + "[INGREDIENTS_START]\\n- 1kg Chicken | 180.00\\n- 2 cloves Garlic | 5.00\\n[INGREDIENTS_END]\\n"
                     + "RULE 2b: DO NOT write the price in the ingredient name string. Put the price ONLY as a raw number after the '|' symbol.\\n"
-                    + "3. Include Numbered Instructions below that.";
+                    + "3. Include Numbered Instructions below that.\\n"
+                    + "4. AT THE VERY END, you MUST include a nutrition line formatted exactly like this:\\n"
+                    + "[NUTRITION] Calories: 450 kcal | Protein: 30g";
 
             String jsonPayload = String.format("{\n" +
                 "    \"model\": \"llama-3.1-8b-instant\",\n" +
@@ -87,6 +94,7 @@ public class AIChatBot {
 
             String rawText = jsonResponse.getAsJsonArray("choices").get(0).getAsJsonObject().getAsJsonObject("message").get("content").getAsString();
 
+            // 1. Parse Recipe Name
             String[] lines = rawText.split("\n");
             for (String line : lines) {
                 if (line.toUpperCase().contains("RECIPE_NAME:")) {
@@ -96,6 +104,27 @@ public class AIChatBot {
                 }
             }
 
+            // 🌟 NEW: Parse Nutrition
+            if (rawText.contains("[NUTRITION]")) {
+                int nStart = rawText.indexOf("[NUTRITION]");
+                int nEnd = rawText.indexOf("\n", nStart);
+                if (nEnd == -1) nEnd = rawText.length();
+                
+                String nutritionLine = rawText.substring(nStart, nEnd).trim();
+                
+                // Remove the tag and split by |
+                String cleanNutrition = nutritionLine.replace("[NUTRITION]", "").trim();
+                String[] parts = cleanNutrition.split("\\|");
+                if (parts.length >= 2) {
+                    result.calories = parts[0].replace("Calories:", "").trim();
+                    result.protein = parts[1].replace("Protein:", "").trim();
+                }
+                
+                // Format for chat display
+                rawText = rawText.replace(nutritionLine, "\n💪 **Nutrition:** " + result.calories + " | Protein: " + result.protein);
+            }
+
+            // 3. Parse Ingredients
             if (rawText.contains("[INGREDIENTS_START]") && rawText.contains("[INGREDIENTS_END]")) {
                 result.hasRecipe = true;
                 int startIndex = rawText.indexOf("[INGREDIENTS_START]") + 19;
@@ -109,9 +138,7 @@ public class AIChatBot {
                         
                         if (cleanItem.contains("|")) {
                             String[] parts = cleanItem.split("\\|");
-                            
                             String name = parts[0].replaceAll("\\(.*?\\d+.*?\\)", "").trim(); 
-                            
                             try {
                                 double price = Double.parseDouble(parts[1].trim());
                                 result.totalEstimatedCost += price;
