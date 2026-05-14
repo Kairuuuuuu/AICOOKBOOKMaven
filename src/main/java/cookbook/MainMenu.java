@@ -6,6 +6,9 @@ import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
 import java.util.List;
 import java.util.ArrayList;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 
 public class MainMenu {
 
@@ -19,6 +22,10 @@ public class MainMenu {
     public static String currentRecipeName = "No meal selected";
     public static List<String> currentIngredients = new ArrayList<>();
     public static List<Boolean> checkedIngredients = new ArrayList<>();
+    
+    // 🌟 FULL RECIPE MEMORY SLOT
+    public static List<String> fullRecipeIngredients = new ArrayList<>();
+    
     public static String savedMissingIngredients = "Missing: 0 items"; 
     public static String currentBudget = "Php 0.00"; 
     public static double currentTotalCost = 0.0; 
@@ -27,6 +34,7 @@ public class MainMenu {
     public static String currentProtein = "0g";
 
     public static String pendingPantryPrompt = ""; 
+    public static boolean isFromPantry = false; 
 
     public static void showMenu() {
         frame = new JFrame("Dirk's CookBook - Main Menu");
@@ -95,7 +103,7 @@ public class MainMenu {
 
         // --- CARD 1: Generate Meal ---
         RoundPanel card1 = new RoundPanel();
-        card1.setBounds(25, 120, 325, 125); // Slightly taller to fit the error message
+        card1.setBounds(25, 120, 325, 125); 
         card1.setLayout(null);
 
         JLabel genText1 = new JLabel("Generate Your Next Meal,");
@@ -111,35 +119,54 @@ public class MainMenu {
         card1.add(genText2);
 
         AnimatedButton genButton = new AnimatedButton("Generate from My Pantry  📖", true);
-        genButton.setBounds(20, 65, 285, 35); // Slightly smaller height
+        genButton.setBounds(20, 65, 285, 35); 
         
-        // 🌟 NEW: INLINE UI ERROR MESSAGE (Hidden by default)
         JLabel emptyPantryWarning = new JLabel("", SwingConstants.CENTER);
         emptyPantryWarning.setFont(new Font("SansSerif", Font.BOLD, 12));
-        emptyPantryWarning.setForeground(new Color(200, 50, 50)); // Red warning text
+        emptyPantryWarning.setForeground(new Color(200, 50, 50)); 
         emptyPantryWarning.setBounds(20, 102, 285, 20);
         card1.add(emptyPantryWarning);
 
         genButton.addActionListener(e -> {
-            // 🌟 NEW: CHECK IF PANTRY IS EMPTY
             if (PantryScreen.savedPantryItems.isEmpty()) {
                 emptyPantryWarning.setText("Your pantry is empty! Add items first.");
-                return; // Stop the code right here, do NOT redirect to chat
+                return; 
             } 
             
-            // If we have items, clear the warning and proceed
-            emptyPantryWarning.setText("");
+            StringBuilder autoPrompt = new StringBuilder("Please generate a recipe using some of these ingredients I have in my pantry:\n\n[MY PANTRY INVENTORY]\n");
+            boolean hasFreshItems = false;
             
-            StringBuilder autoPrompt = new StringBuilder("Please generate a recipe using some of these ingredients I have in my pantry: ");
-            
-            for (int i = 0; i < PantryScreen.savedPantryItems.size(); i++) {
-                autoPrompt.append(PantryScreen.savedPantryItems.get(i).name);
-                if (i < PantryScreen.savedPantryItems.size() - 1) {
-                    autoPrompt.append(", ");
+            for (PantryScreen.PantryItem item : PantryScreen.savedPantryItems) {
+                boolean isExpired = false;
+                
+                if (item.expDate != null && !item.expDate.isEmpty()) {
+                    try {
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+                        LocalDate expiryDate = LocalDate.parse(item.expDate, formatter);
+                        LocalDate today = LocalDate.now();
+                        
+                        if (ChronoUnit.DAYS.between(today, expiryDate) < 0) {
+                            isExpired = true;
+                        }
+                    } catch (Exception ex) {}
+                }
+                
+                if (!isExpired) {
+                    hasFreshItems = true;
+                    String cleanQty = item.qty.replace("Quantity:", "").trim();
+                    autoPrompt.append("- ").append(cleanQty).append(" ").append(item.name).append("\n");
                 }
             }
             
-            // Save the prompt to memory and redirect
+            if (!hasFreshItems) {
+                emptyPantryWarning.setText("All items are expired! Add fresh ones.");
+                return;
+            }
+            
+            emptyPantryWarning.setText("");
+            autoPrompt.append("\nCRITICAL RULE: You MUST NOT exceed the quantities I have available in my inventory. For example, if I only have '3 Potatoes', you must use 3 or fewer. Specify the exact amounts used.");
+            
+            isFromPantry = true;
             pendingPantryPrompt = autoPrompt.toString();
             
             Point loc = frame.getLocation(); 
@@ -219,11 +246,13 @@ public class MainMenu {
                         confirmDialog.dispose();
                         currentRecipeName = "No meal selected";
                         currentIngredients.clear();
+                        fullRecipeIngredients.clear(); 
                         checkedIngredients.clear();
                         savedMissingIngredients = "Missing: 0 items";
                         currentTotalCost = 0.0;
                         currentCalories = "0 kcal"; 
                         currentProtein = "0g";
+                        isFromPantry = false; 
                         
                         Point loc = frame.getLocation(); 
                         frame.dispose(); 
@@ -272,7 +301,7 @@ public class MainMenu {
         double numericBudget = 0.0;
         try { numericBudget = Double.parseDouble(currentBudget.replace("Php", "").replace(",", "").trim()); } catch (Exception e) {}
         
-        if (currentTotalCost > numericBudget && numericBudget > 0) {
+        if (!isFromPantry && currentTotalCost > numericBudget && numericBudget > 0) {
             totalCostLabel.setForeground(Color.RED);
         } else {
             totalCostLabel.setForeground(darkGreen);
@@ -294,14 +323,63 @@ public class MainMenu {
 
         AnimatedButton doneBtn = new AnimatedButton("Done", false);
         doneBtn.setBounds(100, 395, 135, 30); 
+        
+        // 🌟 UPDATED: SPILLOVER DEDUCTION SYSTEM
         doneBtn.addActionListener(e -> {
+            
+            if (!fullRecipeIngredients.isEmpty()) {
+                
+                for (String recipeIng : fullRecipeIngredients) {
+                    
+                    int remainingAmountToDeduct = 1; 
+                    try {
+                        // Extract the first raw number from the Recipe String (e.g., "3 Potatoes" -> 3)
+                        String numStr = recipeIng.replaceAll("\\(.*?\\)", "").replaceAll("[^0-9]", " ").trim().split("\\s+")[0];
+                        if (!numStr.isEmpty()) remainingAmountToDeduct = Integer.parseInt(numStr);
+                    } catch (Exception ex) {}
+
+                    // Loop through pantry items looking for matches to fulfill the needed amount
+                    for (int i = 0; i < PantryScreen.savedPantryItems.size(); i++) {
+                        
+                        if (remainingAmountToDeduct <= 0) break; // Finished finding everything we need!
+                        
+                        PantryScreen.PantryItem pItem = PantryScreen.savedPantryItems.get(i);
+                        
+                        if (recipeIng.toLowerCase().contains(pItem.name.toLowerCase())) {
+                            
+                            int currentQty = 1;
+                            try {
+                                String numStr = pItem.qty.replaceAll("[^0-9]", " ").trim().split("\\s+")[0];
+                                if (!numStr.isEmpty()) currentQty = Integer.parseInt(numStr);
+                            } catch (Exception ex) {}
+
+                            // If this pantry item has LESS OR EQUAL to what we need
+                            if (currentQty <= remainingAmountToDeduct) {
+                                remainingAmountToDeduct -= currentQty;      // We drain this item completely
+                                PantryScreen.savedPantryItems.remove(i);    // Delete it from pantry
+                                i--;                                        // Adjust loop index backwards
+                            } 
+                            // If this pantry item has MORE than what we need
+                            else {
+                                int newQty = currentQty - remainingAmountToDeduct;
+                                pItem.qty = "Quantity: " + newQty;          // Keep it, but lower the number
+                                remainingAmountToDeduct = 0;                // We got all we need
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Standard Wipe
             currentRecipeName = "No meal selected";
             currentIngredients.clear();
+            fullRecipeIngredients.clear(); 
             checkedIngredients.clear();
             savedMissingIngredients = "Missing: 0 items";
             currentTotalCost = 0.0; 
             currentCalories = "0 kcal"; 
             currentProtein = "0g";
+            isFromPantry = false; 
             
             Point loc = frame.getLocation(); 
             frame.dispose(); 

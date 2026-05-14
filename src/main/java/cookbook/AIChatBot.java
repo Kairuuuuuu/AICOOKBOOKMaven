@@ -20,7 +20,6 @@ public class AIChatBot {
         public List<String> ingredients;
         public boolean hasRecipe;
         public double totalEstimatedCost; 
-        // 🌟 NEW: Variables to hold nutrition info
         public String calories;
         public String protein;
     }
@@ -50,7 +49,6 @@ public class AIChatBot {
                         + "However, ALWAYS output the recipe and ingredients block even if it goes slightly over budget.";
             }
 
-            // 🌟 UPDATED: Added rule #4 for Nutrition extraction
             String systemPrompt = "You are a Filipino AI chef. " + budgetInstruction + "\\n\\n"
                     + "CRITICAL RULES IF PROVIDING A RECIPE:\\n"
                     + "1. The VERY FIRST LINE MUST be exactly 'RECIPE_NAME: ' followed by the dish name.\\n"
@@ -60,6 +58,12 @@ public class AIChatBot {
                     + "3. Include Numbered Instructions below that.\\n"
                     + "4. AT THE VERY END, you MUST include a nutrition line formatted exactly like this:\\n"
                     + "[NUTRITION] Calories: 450 kcal | Protein: 30g";
+
+            // 🌟 THE FIX: Safely escaping newlines and quotes so the JSON doesn't crash!
+            String safeUserMessage = userMessage.replace("\\", "\\\\")
+                                                .replace("\"", "\\\"")
+                                                .replace("\n", "\\n")
+                                                .replace("\r", "");
 
             String jsonPayload = String.format("{\n" +
                 "    \"model\": \"llama-3.1-8b-instant\",\n" +
@@ -74,7 +78,7 @@ public class AIChatBot {
                 "        }\n" +
                 "    ],\n" +
                 "    \"temperature\": 0.7\n" +
-                "}", systemPrompt, userMessage.replace("\"", "\\\""));
+                "}", systemPrompt, safeUserMessage);
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(AI_ENDPOINT))
@@ -94,7 +98,7 @@ public class AIChatBot {
 
             String rawText = jsonResponse.getAsJsonArray("choices").get(0).getAsJsonObject().getAsJsonObject("message").get("content").getAsString();
 
-            // 1. Parse Recipe Name
+            // Parse Recipe Name
             String[] lines = rawText.split("\n");
             for (String line : lines) {
                 if (line.toUpperCase().contains("RECIPE_NAME:")) {
@@ -104,15 +108,13 @@ public class AIChatBot {
                 }
             }
 
-            // 🌟 NEW: Parse Nutrition
+            // Parse Nutrition
             if (rawText.contains("[NUTRITION]")) {
                 int nStart = rawText.indexOf("[NUTRITION]");
                 int nEnd = rawText.indexOf("\n", nStart);
                 if (nEnd == -1) nEnd = rawText.length();
                 
                 String nutritionLine = rawText.substring(nStart, nEnd).trim();
-                
-                // Remove the tag and split by |
                 String cleanNutrition = nutritionLine.replace("[NUTRITION]", "").trim();
                 String[] parts = cleanNutrition.split("\\|");
                 if (parts.length >= 2) {
@@ -120,11 +122,10 @@ public class AIChatBot {
                     result.protein = parts[1].replace("Protein:", "").trim();
                 }
                 
-                // Format for chat display
                 rawText = rawText.replace(nutritionLine, "\n💪 **Nutrition:** " + result.calories + " | Protein: " + result.protein);
             }
 
-            // 3. Parse Ingredients
+            // Parse Ingredients
             if (rawText.contains("[INGREDIENTS_START]") && rawText.contains("[INGREDIENTS_END]")) {
                 result.hasRecipe = true;
                 int startIndex = rawText.indexOf("[INGREDIENTS_START]") + 19;

@@ -112,10 +112,7 @@ public class PantryScreen {
         pantryGrid.setLayout(null); 
         pantryGrid.setPreferredSize(new Dimension(390, 535)); 
         
-        itemCount = 0;
-        for (PantryItem item : savedPantryItems) {
-            addItemToGrid(item.name, item.qty, item.expDate);
-        }
+        refreshGrid();
         
         JScrollPane pantryScroll = new JScrollPane(pantryGrid);
         pantryScroll.setBounds(0, 175, 390, 535); 
@@ -186,6 +183,16 @@ public class PantryScreen {
         frame.setVisible(true);
     }
 
+    private static void refreshGrid() {
+        pantryGrid.removeAll();
+        itemCount = 0;
+        for (int i = 0; i < savedPantryItems.size(); i++) {
+            addItemToGrid(i, savedPantryItems.get(i));
+        }
+        pantryGrid.revalidate();
+        pantryGrid.repaint();
+    }
+
     private static void showAddMenu() {
         JDialog dialog = new JDialog(frame, true);
         dialog.setUndecorated(true); 
@@ -251,11 +258,10 @@ public class PantryScreen {
         expField.setBounds(25, 310, 250, 35);
         popupPanel.add(expField);
 
-        // 🌟 NEW: INLINE UI ERROR MESSAGE LABEL (Hidden by default)
         JLabel errorLabel = new JLabel("", SwingConstants.CENTER);
         errorLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
-        errorLabel.setForeground(new Color(200, 50, 50)); // Red warning text
-        errorLabel.setBounds(10, 355, 280, 20); // Sits right above the buttons
+        errorLabel.setForeground(new Color(200, 50, 50)); 
+        errorLabel.setBounds(10, 355, 280, 20); 
         popupPanel.add(errorLabel);
 
         MainMenu.AnimatedButton cancelBtn = new MainMenu.AnimatedButton("Cancel", false);
@@ -272,39 +278,35 @@ public class PantryScreen {
             dialog.dispose(); 
         });
 
-        // Clear the error label if they click on the date field again to try fixing it
         expField.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
-                errorLabel.setText(""); // Hide the error text when user clicks to type
+                errorLabel.setText(""); 
             }
         });
 
         addBtn.addActionListener(e -> {
             String rawExp = expField.getText().replace("📅", "").trim();
 
-            // 🌟 INLINE UI ERROR: Blank Date
             if (rawExp.isEmpty() || rawExp.equals("MM/DD/YYYY")) {
                 errorLabel.setText("Please enter an expiry date.");
-                return; // Stop the code here
+                return; 
             }
 
-            // 🌟 INLINE UI ERROR: Invalid Date Format
             try {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
                 LocalDate.parse(rawExp, formatter); 
             } catch (Exception ex) {
                 errorLabel.setText("Invalid format! Use MM/DD/YYYY");
-                return; // Stop the code here
+                return; 
             }
 
-            // If valid, proceed to save:
             String newName = nameField.getText().isEmpty() || nameField.getText().equals("Enter Item Name...") ? "New Food" : nameField.getText();
             String newQty = qtyField.getText().isEmpty() || qtyField.getText().equals("Enter Quantity...") ? "Quantity: ?" : "Quantity: " + qtyField.getText();
             
             savedPantryItems.add(new PantryItem(newName, newQty, rawExp));
+            refreshGrid();
             
-            addItemToGrid(newName, newQty, rawExp);
             frame.getGlassPane().setVisible(false);
             fab.setVisible(true); 
             dialog.dispose();
@@ -313,14 +315,181 @@ public class PantryScreen {
         dialog.setVisible(true);
     }
 
-    private static void addItemToGrid(String name, String qty, String expDateStr) {
+    // 🌟 NEW: Helper to check if an item is locked by the Shopping List
+    private static boolean isItemLocked(int index) {
+        if (MainMenu.isFromPantry && !MainMenu.fullRecipeIngredients.isEmpty()) {
+            if (index < 0 || index >= savedPantryItems.size()) return false;
+            
+            PantryItem item = savedPantryItems.get(index);
+            for (String recipeIng : MainMenu.fullRecipeIngredients) {
+                if (recipeIng.toLowerCase().contains(item.name.toLowerCase())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // 🌟 NEW: Warning popup if the item is locked
+    private static void showLockedWarning() {
+        JDialog warningDialog = new JDialog(frame, true);
+        warningDialog.setUndecorated(true);
+        warningDialog.setBackground(new Color(0, 0, 0, 0));
+        warningDialog.setSize(390, 844);
+        warningDialog.setLocationRelativeTo(frame);
+
+        JPanel warnOverlay = new JPanel(null) {
+            protected void paintComponent(Graphics g) {
+                g.setColor(new Color(0, 0, 0, 160));
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        warnOverlay.setOpaque(false);
+        warningDialog.setContentPane(warnOverlay);
+
+        MainMenu.RoundPanel warnPopup = new MainMenu.RoundPanel();
+        warnPopup.setBounds(45, 350, 300, 150);
+        warnPopup.setLayout(null);
+        warnOverlay.add(warnPopup);
+
+        JLabel warnLabel = new JLabel("<html><center>Cannot modify item!<br>It is currently being used by your<br>active Shopping List recipe.</center></html>", SwingConstants.CENTER);
+        warnLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
+        warnLabel.setForeground(new Color(200, 50, 50));
+        warnLabel.setBounds(10, 20, 280, 60);
+        warnPopup.add(warnLabel);
+
+        JButton okBtn = new JButton("OK");
+        okBtn.setBounds(100, 95, 100, 35);
+        okBtn.setBackground(new Color(14, 71, 17));
+        okBtn.setForeground(Color.WHITE);
+        okBtn.setFocusPainted(false);
+        okBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        okBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        okBtn.addActionListener(eOk -> warningDialog.dispose());
+        warnPopup.add(okBtn);
+
+        warningDialog.setVisible(true);
+    }
+
+    private static void showEditDialog(int index) {
+        PantryItem item = savedPantryItems.get(index);
+        
+        JDialog dialog = new JDialog(frame, true);
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0,0,0,0));
+        dialog.setSize(390, 844);
+        dialog.setLocationRelativeTo(frame);
+
+        JPanel overlay = new JPanel(null) {
+            protected void paintComponent(Graphics g) {
+                g.setColor(new Color(0, 0, 0, 160));
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        overlay.setOpaque(false);
+        dialog.setContentPane(overlay);
+
+        MainMenu.RoundPanel popup = new MainMenu.RoundPanel();
+        popup.setBounds(45, 350, 300, 180);
+        popup.setLayout(null);
+        overlay.add(popup);
+
+        JLabel title = new JLabel("Edit Quantity", SwingConstants.CENTER);
+        title.setFont(new Font("SansSerif", Font.BOLD, 18));
+        title.setForeground(new Color(14, 71, 17));
+        title.setBounds(10, 15, 280, 25);
+        popup.add(title);
+
+        String currentQtyNum = item.qty.replace("Quantity:", "").trim();
+        MainMenu.RoundTextField qtyField = new MainMenu.RoundTextField("New Quantity...");
+        qtyField.setText(currentQtyNum);
+        qtyField.setForeground(Color.BLACK);
+        qtyField.setBounds(25, 55, 250, 40);
+        popup.add(qtyField);
+
+        MainMenu.AnimatedButton cancelBtn = new MainMenu.AnimatedButton("Cancel", false);
+        cancelBtn.setBounds(25, 115, 115, 35);
+        cancelBtn.addActionListener(e -> dialog.dispose());
+        popup.add(cancelBtn);
+
+        MainMenu.AnimatedButton saveBtn = new MainMenu.AnimatedButton("Save", true);
+        saveBtn.setBounds(150, 115, 125, 35);
+        saveBtn.addActionListener(e -> {
+            String newQty = qtyField.getText().trim();
+            if(!newQty.isEmpty() && !newQty.equals("New Quantity...")) {
+                item.qty = "Quantity: " + newQty;
+                refreshGrid();
+            }
+            dialog.dispose();
+        });
+        popup.add(saveBtn);
+
+        dialog.setVisible(true);
+    }
+
+    private static void showDeleteDialog(int index) {
+        JDialog dialog = new JDialog(frame, true);
+        dialog.setUndecorated(true);
+        dialog.setBackground(new Color(0, 0, 0, 0));
+        dialog.setSize(390, 844);
+        dialog.setLocationRelativeTo(frame);
+
+        JPanel overlay = new JPanel(null) {
+            protected void paintComponent(Graphics g) {
+                g.setColor(new Color(0, 0, 0, 160));
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        overlay.setOpaque(false);
+        dialog.setContentPane(overlay);
+
+        MainMenu.RoundPanel popup = new MainMenu.RoundPanel();
+        popup.setBounds(45, 350, 300, 150);
+        popup.setLayout(null);
+        overlay.add(popup);
+
+        JLabel askLabel = new JLabel("<html><center>Remove this item from<br>your pantry?</center></html>", SwingConstants.CENTER);
+        askLabel.setFont(new Font("SansSerif", Font.BOLD, 15));
+        askLabel.setForeground(Color.BLACK);
+        askLabel.setBounds(10, 25, 280, 40);
+        popup.add(askLabel);
+
+        JButton yesBtn = new JButton("Yes");
+        yesBtn.setBounds(40, 90, 90, 35);
+        yesBtn.setBackground(new Color(200, 50, 50)); 
+        yesBtn.setForeground(Color.WHITE);
+        yesBtn.setFocusPainted(false);
+        yesBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        yesBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        yesBtn.addActionListener(e -> {
+            savedPantryItems.remove(index);
+            refreshGrid();
+            dialog.dispose();
+        });
+        popup.add(yesBtn);
+
+        JButton noBtn = new JButton("No");
+        noBtn.setBounds(170, 90, 90, 35);
+        noBtn.setBackground(Color.WHITE);
+        noBtn.setForeground(new Color(14, 71, 17));
+        noBtn.setFocusPainted(false);
+        noBtn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        noBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        noBtn.addActionListener(e -> dialog.dispose()); 
+        popup.add(noBtn);
+
+        dialog.setVisible(true);
+    }
+
+    private static void addItemToGrid(int index, PantryItem item) {
         String statusText = "Fresh";
         Color statusColor = new Color(40, 167, 69); 
 
-        if (expDateStr != null && !expDateStr.isEmpty()) {
+        if (item.expDate != null && !item.expDate.isEmpty()) {
             try {
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-                LocalDate expiryDate = LocalDate.parse(expDateStr, formatter);
+                LocalDate expiryDate = LocalDate.parse(item.expDate, formatter);
                 LocalDate today = LocalDate.now();
                 
                 long daysBetween = ChronoUnit.DAYS.between(today, expiryDate);
@@ -338,7 +507,7 @@ public class PantryScreen {
         int xPos = 25 + (itemCount % 2) * 170; 
         int yPos = 0 + (itemCount / 2) * 170;  
 
-        PantryCard newCard = new PantryCard(name, qty, statusText, statusColor);
+        PantryCard newCard = new PantryCard(index, item.name, item.qty, statusText, statusColor);
         newCard.setBounds(xPos, yPos, 155, 155);
         
         pantryGrid.add(newCard);
@@ -347,19 +516,52 @@ public class PantryScreen {
         int rows = (itemCount + 1) / 2;
         int requiredHeight = Math.max(535, rows * 170 + 20); 
         pantryGrid.setPreferredSize(new Dimension(390, requiredHeight));
-        
-        pantryGrid.revalidate(); 
-        frame.repaint(); 
     }
 
     static class PantryCard extends JPanel {
         Color statusColor;
+        int itemIndex;
         
-        public PantryCard(String title, String qty, String status, Color statusColor) {
+        public PantryCard(int index, String title, String qty, String status, Color statusColor) {
+            this.itemIndex = index;
             this.statusColor = statusColor; 
             setLayout(null); 
             setOpaque(false);
             
+            JLabel editBtn = new JLabel("⋮");
+            editBtn.setFont(new Font("SansSerif", Font.BOLD, 18));
+            editBtn.setForeground(Color.DARK_GRAY);
+            editBtn.setBounds(110, 5, 20, 20);
+            editBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            editBtn.addMouseListener(new MouseAdapter() {
+                public void mousePressed(MouseEvent e) {
+                    // 🌟 LOCK CHECK: Prevents editing if actively used in a recipe!
+                    if (isItemLocked(itemIndex)) {
+                        showLockedWarning();
+                    } else {
+                        showEditDialog(itemIndex);
+                    }
+                }
+            });
+            add(editBtn);
+
+            JLabel trashBtn = new JLabel("🗑");
+            trashBtn.setFont(new Font("SansSerif", Font.PLAIN, 15));
+            trashBtn.setForeground(new Color(200, 50, 50));
+            trashBtn.setBounds(130, 6, 20, 20);
+            trashBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            trashBtn.addMouseListener(new MouseAdapter() {
+                public void mousePressed(MouseEvent e) {
+                    // 🌟 LOCK CHECK: Prevents deletion if actively used in a recipe!
+                    if (isItemLocked(itemIndex)) {
+                        showLockedWarning();
+                    } else {
+                        showDeleteDialog(itemIndex);
+                    }
+                }
+            });
+            add(trashBtn);
+
             JLabel imgLabel = new JLabel("📷", SwingConstants.CENTER);
             imgLabel.setFont(new Font("SansSerif", Font.PLAIN, 30));
             imgLabel.setForeground(Color.GRAY);
