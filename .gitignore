@@ -1,0 +1,8 @@
+/target/
+/ai-cookbook-f347b-firebase-adminsdk-fbsvc-526f99b3f7.json
+.settings/
+.classpath
+.project
+bin/
+.vscode/
+target/
