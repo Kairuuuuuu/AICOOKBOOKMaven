@@ -8,7 +8,7 @@ import javax.mail.internet.*;
 public class EmailSender {
 
     private static final String SENDER_EMAIL = "aicookbooknoreply@gmail.com"; 
-    private static final String APP_PASSWORD = "EMAIL_PASWORD"; 
+    private static final String APP_PASSWORD = System.getenv("EMAIL_PASSWORD");
 
     public static String sendOTP(String recipientEmail) {
         

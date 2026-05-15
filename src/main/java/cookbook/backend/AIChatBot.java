@@ -55,6 +55,8 @@ public class AIChatBot {
                     + "2. You MUST wrap ingredients EXACTLY like this:\\n"
                     + "[INGREDIENTS_START]\\n- 1kg Chicken | 180.00\\n- 2 cloves Garlic | 5.00\\n[INGREDIENTS_END]\\n"
                     + "RULE 2b: DO NOT write the price in the ingredient name string. Put the price ONLY as a raw number after the '|' symbol.\\n"
+                    +"Another rule is that put the Estimated Cost Below the Ingredients List and format it like this:\\n"
+                    + "TOTAL ESTIMATED COST: Php [amount]\\n"
                     + "3. Include Numbered Instructions below that.\\n"
                     + "4. AT THE VERY END, you MUST include a nutrition line formatted exactly like this:\\n"
                     + "[NUTRITION] Calories: 450 kcal | Protein: 30g";
