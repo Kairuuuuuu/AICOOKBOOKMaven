@@ -8,12 +8,11 @@ import java.time.temporal.ChronoUnit;
 
 public class CookbookState {
 
-    // 🌟 THE MEMORY BANK (State Variables)
     public static String currentRecipeName = "No meal selected";
     public static List<String> currentIngredients = new ArrayList<>();
     public static List<Boolean> checkedIngredients = new ArrayList<>();
-    
-    // 🌟 FULL RECIPE MEMORY SLOT
+    public static List<String> shoppingList = new ArrayList<>();
+
     public static List<String> fullRecipeIngredients = new ArrayList<>();
     
     public static String savedMissingIngredients = "Missing: 0 items"; 
@@ -108,9 +107,7 @@ public class CookbookState {
         clearState();
     }
 
-    /**
-     * Resets the application's meal data to a clean slate.
-     */
+
     public static void clearState() {
         currentRecipeName = "No meal selected";
         currentIngredients.clear();

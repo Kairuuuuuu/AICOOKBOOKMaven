@@ -9,10 +9,9 @@ import java.util.List;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-
 public class AIChatBot {
 
-    private static final String AI_ENDPOINT = "GROQAIENDPOINT";
+    private static final String AI_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
     private static final String API_KEY = System.getenv("GROQ_API_KEY"); 
 
     public static class ParsedResponse {
@@ -98,7 +97,7 @@ public class AIChatBot {
 
             String rawText = jsonResponse.getAsJsonArray("choices").get(0).getAsJsonObject().getAsJsonObject("message").get("content").getAsString();
 
-            // Parse Recipe Name
+            // Your exact original parsing logic
             String[] lines = rawText.split("\n");
             for (String line : lines) {
                 if (line.toUpperCase().contains("RECIPE_NAME:")) {
@@ -108,7 +107,6 @@ public class AIChatBot {
                 }
             }
 
-            // Parse Nutrition
             if (rawText.contains("[NUTRITION]")) {
                 int nStart = rawText.indexOf("[NUTRITION]");
                 int nEnd = rawText.indexOf("\n", nStart);
@@ -125,7 +123,6 @@ public class AIChatBot {
                 rawText = rawText.replace(nutritionLine, "\n💪 **Nutrition:** " + result.calories + " | Protein: " + result.protein);
             }
 
-            // Parse Ingredients
             if (rawText.contains("[INGREDIENTS_START]") && rawText.contains("[INGREDIENTS_END]")) {
                 result.hasRecipe = true;
                 int startIndex = rawText.indexOf("[INGREDIENTS_START]") + 19;

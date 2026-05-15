@@ -75,60 +75,46 @@ public class FirebaseManager {
     }
     
     public static String loginUser(String email, String password, String webApiKey) {
-        try {
-            String urlString = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + webApiKey;
-            java.net.URL url = new java.net.URL(urlString);
-            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
+    try {
+        String urlString = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=" + webApiKey.trim();
+        java.net.URL url = new java.net.URL(urlString);
+        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
 
-            String jsonInput = "{\"email\": \"" + email + "\", \"password\": \"" + password + "\", \"returnSecureToken\": true}";
 
-            try(java.io.OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInput.getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
+        String safeEmail = email.trim();
+        String safePassword = password; 
 
-            int responseCode = conn.getResponseCode();
-            
-            if (responseCode == 200) {
-                return "SUCCESS";
-            } else {
-                java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getErrorStream()));
-                StringBuilder response = new StringBuilder();
-                String line;
-                while ((line = br.readLine()) != null) {
-                    response.append(line);
-                }
-                br.close();
-                String errorBody = response.toString();
+        String jsonInput = String.format(
+            "{\"email\":\"%s\",\"password\":\"%s\",\"returnSecureToken\":true}",
+            safeEmail, safePassword
+        );
 
-                System.out.println("FIREBASE SECRET ERROR (LOGIN): " + errorBody);
-
-                if (errorBody.contains("EMAIL_NOT_FOUND")) {
-                    return "Account does not exist. Please Sign Up!";
-                } else if (errorBody.contains("INVALID_PASSWORD")) {
-                    return "Incorrect password!";
-                } else if (errorBody.contains("INVALID_LOGIN_CREDENTIALS")) {
-                    return "Invalid Email or Password!"; 
-                } else if (errorBody.contains("TOO_MANY_ATTEMPTS_TRY_LATER")) {
-                    return "Too many failed attempts. Try again later!"; 
-                } else {
-                    return "Login failed. Please try again."; 
-                }
-            }
-
-        } catch (Exception e) {
-            System.out.println("Login Error: " + e.getMessage());
-            return "Connection Error. Try Again!";
+        try (java.io.OutputStream os = conn.getOutputStream()) {
+            byte[] input = jsonInput.getBytes("utf-8");
+            os.write(input, 0, input.length);
         }
+
+        int responseCode = conn.getResponseCode();
+        if (responseCode == 200) {
+            return "SUCCESS";
+        } else {
+
+            java.io.InputStream es = conn.getErrorStream();
+
+            return "Firebase Error: " + responseCode; 
+        }
+    } catch (Exception e) {
+        return "Connection Error: " + e.getMessage();
     }
+}
 
     // 🌟 NEW METHOD: Uses Admin SDK to force a password update!
     public static String changePassword(String email, String newPassword) {
         try {
-            // 1. Find the user's hidden UID using their email
+
             UserRecord user = FirebaseAuth.getInstance().getUserByEmail(email);
             
             // 2. Update the password for that specific account

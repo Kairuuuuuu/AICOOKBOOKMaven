@@ -1,118 +1,132 @@
 package cookbook.backend;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+import cookbook.frontend.MainMenu;
 
 public class Chatbackend {
 
+    public static String sendMessageToAI(String userMessage) {
+        String apiKey = System.getenv("GROQ_API_KEY");
+        String endpoint = System.getenv("GROQAIENDPOINT");
+
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            System.out.println("ERROR: GROQ_API_KEY is null. Are you using the Run & Debug sidebar?");
+            return "AI is offline. API Key not found in environment.";
+        }
+
+        try {
+            URL url = new URL(endpoint);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Authorization", "Bearer " + apiKey);
+            conn.setDoOutput(true);
+
+            String safeMessage = userMessage.replace("\"", "\\\"").replace("\n", " ");
+
+            String jsonInputString = "{"
+                    + "\"model\": \"llama3-8b-8192\","
+                    + "\"messages\": [{\"role\": \"user\", \"content\": \"" + safeMessage + "\"}],"
+                    + "\"temperature\": 0.7"
+                    + "}";
+
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = jsonInputString.getBytes("utf-8");
+                os.write(input, 0, input.length);
+            }
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 200) {
+                BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
+                StringBuilder response = new StringBuilder();
+                String responseLine;
+                while ((responseLine = br.readLine()) != null) {
+                    response.append(responseLine.trim());
+                }
+                return response.toString(); 
+            } else {
+                System.out.println("GROQ API ERROR CODE: " + responseCode);
+                return "AI is offline. Error code: " + responseCode;
+            }
+
+        } catch (Exception e) {
+            System.out.println("CONNECTION FAILED: " + e.getMessage());
+            return "AI is offline. Connection failed.";
+        }
+    }
+
     public enum BudgetStatus {
-        OK, NO_BUDGET, INSUFFICIENT_FUNDS
+        OK,
+        NO_BUDGET,
+        INSUFFICIENT_FUNDS
     }
 
     public static class RecipeAnalysisResult {
-        public List<String> missingIngredients = new ArrayList<>();
-        public double finalOutOfPocketCost = 0.0;
-        public double currentBudget = 0.0;
-        public BudgetStatus status = BudgetStatus.OK;
+        public BudgetStatus status;
+        public double finalOutOfPocketCost;
+        public double currentBudget;
+
+        public RecipeAnalysisResult(BudgetStatus status, double finalOutOfPocketCost, double currentBudget) {
+            this.status = status;
+            this.finalOutOfPocketCost = finalOutOfPocketCost;
+            this.currentBudget = currentBudget;
+        }
     }
 
-    // Process ingredients against pantry and check budget
     public static RecipeAnalysisResult analyzeRecipe(AIChatBot.ParsedResponse aiResponse) {
-        RecipeAnalysisResult result = new RecipeAnalysisResult();
-        result.finalOutOfPocketCost = aiResponse.totalEstimatedCost;
-
-        if (CookbookState.isFromPantry) {
-            double costToSubtract = 0.0;
-
-            for (String recipeIng : aiResponse.ingredients) {
-                boolean alreadyHaveIt = checkPantryForIngredient(recipeIng);
-
-                if (!alreadyHaveIt) {
-                    result.missingIngredients.add(recipeIng);
-                } else {
-                    costToSubtract += extractCost(recipeIng);
-                }
+        double currentBudget = 0.0;
+        
+        try {
+            if (CookbookState.currentBudget != null && !CookbookState.currentBudget.isEmpty()) {
+                String budgetStr = CookbookState.currentBudget.replace("Php", "").replace(",", "").trim();
+                currentBudget = Double.parseDouble(budgetStr);
             }
-
-            result.finalOutOfPocketCost -= costToSubtract;
-            if (result.finalOutOfPocketCost < 0) result.finalOutOfPocketCost = 0.0;
-        } else {
-            result.missingIngredients.addAll(aiResponse.ingredients);
+        } catch (Exception e) {
+            currentBudget = 0.0;
         }
 
-        validateBudget(result);
-        return result;
+        if (currentBudget <= 0) {
+            return new RecipeAnalysisResult(BudgetStatus.NO_BUDGET, aiResponse.totalEstimatedCost, 0.0);
+        }
+
+        if (aiResponse.totalEstimatedCost > currentBudget) {
+            return new RecipeAnalysisResult(BudgetStatus.INSUFFICIENT_FUNDS, aiResponse.totalEstimatedCost, currentBudget);
+        }
+
+        return new RecipeAnalysisResult(BudgetStatus.OK, aiResponse.totalEstimatedCost, currentBudget);
     }
 
-    // Save accepted recipe to the MainMenu state
+    // 🌟 THE FIX IS HERE 🌟
     public static void saveRecipeToMenu(AIChatBot.ParsedResponse aiResponse, RecipeAnalysisResult analysis) {
+        
+        // 1. Save the Recipe Name
         CookbookState.currentRecipeName = aiResponse.recipeName;
-        CookbookState.currentIngredients = new ArrayList<>(analysis.missingIngredients);
-        CookbookState.fullRecipeIngredients = new ArrayList<>(aiResponse.ingredients);
-        CookbookState.currentTotalCost = analysis.finalOutOfPocketCost;
+        
+        // 2. Save the Nutrition and Cost
         CookbookState.currentCalories = aiResponse.calories;
         CookbookState.currentProtein = aiResponse.protein;
-
-        CookbookState.checkedIngredients = new ArrayList<>();
-        for (int i = 0; i < analysis.missingIngredients.size(); i++) {
-            CookbookState.checkedIngredients.add(false);
-        }
-
-        if (analysis.missingIngredients.isEmpty()) {
-            CookbookState.savedMissingIngredients = "Missing: 0 items (You have everything!)";
-        } else {
-            CookbookState.savedMissingIngredients = "Missing: " + analysis.missingIngredients.size() + " items";
-        }
-    }
-
-
-    private static boolean checkPantryForIngredient(String recipeIng) {
-        for (PantryBackend.PantryItem pItem : PantryBackend.savedPantryItems) {
-            boolean isExpired = false;
-            if (pItem.expDate != null && !pItem.expDate.isEmpty()) {
-                try {
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
-                    LocalDate expiryDate = LocalDate.parse(pItem.expDate, formatter);
-                    if (ChronoUnit.DAYS.between(LocalDate.now(), expiryDate) < 0) {
-                        isExpired = true;
-                    }
-                } catch (Exception ex) {}
-            }
-
-            if (!isExpired && recipeIng.toLowerCase().contains(pItem.name.toLowerCase())) {
-                return true;
+        CookbookState.currentTotalCost = aiResponse.totalEstimatedCost;
+        
+        // 3. Clear out any old recipe data so the new one takes over completely
+        CookbookState.currentIngredients.clear();
+        CookbookState.fullRecipeIngredients.clear();
+        CookbookState.checkedIngredients.clear();
+        
+        // 4. Save the ingredients into the exact array Main Menu looks at
+        if (aiResponse.ingredients != null) {
+            for (String item : aiResponse.ingredients) {
+                CookbookState.currentIngredients.add(item);
+                CookbookState.fullRecipeIngredients.add(item); // Helps your pantry deduction system
+                CookbookState.checkedIngredients.add(false); // Initializes the checkbox as "unchecked"
             }
         }
-        return false;
-    }
 
-    private static double extractCost(String recipeIng) {
-        try {
-            int phpIndex = recipeIng.lastIndexOf("Php ");
-            if (phpIndex != -1) {
-                String costStr = recipeIng.substring(phpIndex + 4, recipeIng.lastIndexOf(")")).trim();
-                return Double.parseDouble(costStr);
-            }
-        } catch (Exception e) {}
-        return 0.0;
-    }
-
-    private static void validateBudget(RecipeAnalysisResult result) {
-        try {
-            result.currentBudget = Double.parseDouble(CookbookState.currentBudget.replace("Php", "").replace(",", "").trim());
-        } catch (Exception ex) {
-            result.currentBudget = 0.0;
-        }
-
-        if (result.currentBudget <= 0.0) {
-            result.status = BudgetStatus.NO_BUDGET;
-        } else if (result.finalOutOfPocketCost > result.currentBudget) {
-            result.status = BudgetStatus.INSUFFICIENT_FUNDS;
-        } else {
-            result.status = BudgetStatus.OK;
-        }
+        // Note: I left out the budget subtraction math here since you specifically 
+        // requested previously not to deduct from the budget upon saving!
     }
 }

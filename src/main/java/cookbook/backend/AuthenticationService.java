@@ -15,7 +15,7 @@ public class AuthenticationService {
         }
         else{
             new Thread(() -> {
-            String apiKey = System.getenv("AIzaSyDCz1o-wE65Wleh6mrz9d-dNKKFrYqfXiw"); 
+            String apiKey = System.getenv("FIREBASE_API_KEY"); 
             String resultMessage = FirebaseManager.loginUser(email, password, apiKey);
 
             if (resultMessage.equals("SUCCESS")) {

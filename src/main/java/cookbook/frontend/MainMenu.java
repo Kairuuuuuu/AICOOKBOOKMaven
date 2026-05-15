@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import cookbook.backend.CookbookState;
+import cookbook.backend.PantryBackend;
 
 public class MainMenu {
 
@@ -104,10 +105,9 @@ public class MainMenu {
         emptyPantryWarning.setBounds(20, 102, 285, 20);
         card1.add(emptyPantryWarning);
 
-        // 🌟 DELEGATED TO BACKEND 
         genButton.addActionListener(e -> {
             try {
-                CookbookState.generatePromptFromPantry(PantryScreen.savedPantryItems);
+                CookbookState.generatePromptFromPantry(PantryBackend.savedPantryItems);
                 emptyPantryWarning.setText(""); // Success, clear warnings
 
                 Point loc = frame.getLocation(); 
@@ -268,7 +268,7 @@ public class MainMenu {
         
         // 🌟 DELEGATED TO BACKEND 
         doneBtn.addActionListener(e -> {
-            CookbookState.deductIngredientsAndClearState(PantryScreen.savedPantryItems);
+            CookbookState.deductIngredientsAndClearState(PantryBackend.savedPantryItems);
             
             Point loc = frame.getLocation(); 
             frame.dispose(); 

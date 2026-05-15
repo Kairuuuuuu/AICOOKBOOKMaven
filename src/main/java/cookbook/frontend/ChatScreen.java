@@ -175,7 +175,7 @@ public class ChatScreen {
         } else if (isFirstLoad) {
             SwingUtilities.invokeLater(() -> {
                 Timer initialGreeting = new Timer(500, evt -> {
-                    chatHistoryPanel.add(new ChatBubble("Welcome back Kyle! 👋 I can help you with recipes, pantry management, or meal planning. What's on your mind today?", false));
+                    chatHistoryPanel.add(new ChatBubble("Welcome! 👋 I can help you with recipes, pantry management, or meal planning. What's on your mind today?", false));
                     chatHistoryPanel.add(Box.createRigidArea(new Dimension(0, 15)));
                     refreshUI(scrollPane);
                     inputField.requestFocusInWindow();
@@ -219,14 +219,14 @@ public class ChatScreen {
                     JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 20, 0));
                     buttonPanel.setOpaque(false);
                     
-                    JButton addToListBtn = new JButton(new CartIcon());
+                    JButton addToListBtn = new JButton("🛒");
                     addToListBtn.setPreferredSize(new Dimension(50, 40));
                     addToListBtn.setBackground(darkGreen);
                     addToListBtn.setFocusPainted(false);
                     addToListBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
                     
                     addToListBtn.addActionListener(evt -> {
-                        // BACKEND CALL: Analyze the recipe
+
                         Chatbackend.RecipeAnalysisResult analysis = Chatbackend.analyzeRecipe(aiResponse);
 
                         if (analysis.status == Chatbackend.BudgetStatus.NO_BUDGET) {
@@ -293,7 +293,6 @@ public class ChatScreen {
         yesBtn.addActionListener(eYes -> {
             confirmDialog.dispose(); 
             
-            // BACKEND CALL: Save the data
             Chatbackend.saveRecipeToMenu(aiResponse, analysis);
             
             buttonPanel.setVisible(false);
@@ -417,26 +416,5 @@ public class ChatScreen {
             };
             bubble.setOpaque(false); bubble.add(textLabel, BorderLayout.CENTER); add(bubble);
         }
-    }
-
-    static class CartIcon implements Icon {
-        public void paintIcon(Component c, Graphics g, int x, int y) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(Color.WHITE);
-            g2.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            
-            g2.drawLine(x + 4, y + 6, x + 8, y + 6);
-            g2.drawLine(x + 8, y + 6, x + 11, y + 16);
-            g2.drawLine(x + 11, y + 16, x + 21, y + 16);
-            g2.drawLine(x + 21, y + 16, x + 23, y + 8);
-            g2.drawLine(x + 23, y + 8, x + 9, y + 8);
-            
-            g2.fillOval(x + 11, y + 18, 4, 4);
-            g2.fillOval(x + 18, y + 18, 4, 4);
-            g2.dispose();
-        }
-        public int getIconWidth() { return 28; }
-        public int getIconHeight() { return 28; }
     }
 }
