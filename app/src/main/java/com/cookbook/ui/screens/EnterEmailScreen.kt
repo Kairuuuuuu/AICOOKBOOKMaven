@@ -30,7 +30,7 @@ fun EnterEmailScreen(
     viewModel: CookbookViewModel,
     onBack: () -> Unit,
     onNext: (email: String, sentCode: String) -> Unit,
-    onLogin: () -> Unit
+    onLogin: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
     var email by remember { mutableStateOf("") }
@@ -140,7 +140,7 @@ fun EnterEmailScreen(
                             .height(50.dp),
                         shape = RoundedCornerShape(25.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = GreenPrimary),
-                        enabled = !sendingOtp
+                        enabled = !sendingOtp && email.isNotBlank()
                     ) {
                         if (sendingOtp) {
                             CircularProgressIndicator(

@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,7 +41,6 @@ data class ChatMessage(
 @Composable
 fun ChatScreen(
     viewModel: CookbookViewModel,
-    onBack: () -> Unit,
     onNavigateToMainMenu: () -> Unit,
     onNavigateToPantry: () -> Unit
 ) {
@@ -230,7 +230,7 @@ fun ChatScreen(
                         enabled = inputText.isNotBlank() && !isThinking
                     ) {
                         Icon(
-                            Icons.Default.Send,
+                            Icons.AutoMirrored.Filled.Send,
                             contentDescription = "Send",
                             tint = White,
                             modifier = Modifier.size(20.dp)

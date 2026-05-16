@@ -7,6 +7,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -386,7 +389,7 @@ fun BottomNavBar(selectedTab: Int, onTabSelected: (Int) -> Unit) {
         NavTabItem(icon = Icons.Default.Kitchen, label = "My Pantry", selected = selectedTab == 1) {
             onTabSelected(1)
         }
-        NavTabItem(icon = Icons.Default.Chat, label = "AI Chat", selected = selectedTab == 2) {
+        NavTabItem(icon = Icons.AutoMirrored.Filled.Chat, label = "AI Chat", selected = selectedTab == 2) {
             onTabSelected(2)
         }
     }
@@ -472,7 +475,7 @@ fun SideMenuOverlay(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = viewModel.state.value.firstName.first().uppercase(),
+                        text = state.firstName.firstOrNull()?.uppercase() ?: "",
                         color = White,
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold
@@ -516,8 +519,8 @@ fun SideMenuOverlay(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 SideMenuItem(Icons.Default.Lock, "Change Password") { onChangePassword() }
-                SideMenuItem(Icons.Default.Logout, "Logout") { showLogoutConfirm = true }
-                SideMenuItem(Icons.Default.Help, "Help & FAQs") { showHelp = true }
+                SideMenuItem(Icons.AutoMirrored.Filled.Logout, "Logout") { showLogoutConfirm = true }
+                SideMenuItem(Icons.AutoMirrored.Filled.Help, "Help & FAQs") { showHelp = true }
             }
 
             Spacer(modifier = Modifier.weight(1f))

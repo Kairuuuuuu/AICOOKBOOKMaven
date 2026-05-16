@@ -25,15 +25,15 @@ import androidx.compose.ui.unit.sp
 import com.cookbook.data.model.PantryItem
 import com.cookbook.ui.theme.*
 import com.cookbook.ui.viewmodel.CookbookViewModel
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantryScreen(
     viewModel: CookbookViewModel,
-    onBack: () -> Unit,
     onNavigateToMainMenu: () -> Unit,
     onNavigateToChat: () -> Unit
 ) {
@@ -291,11 +291,22 @@ enum class ExpiryStatus { FRESH, EXPIRING, EXPIRED }
 private fun getExpiryStatus(expDate: String): ExpiryStatus {
     if (expDate.isBlank()) return ExpiryStatus.FRESH
     return try {
-        val date = LocalDate.parse(expDate, DateTimeFormatter.ofPattern("MM/dd/yyyy"))
-        val daysUntilExpiry = ChronoUnit.DAYS.between(LocalDate.now(), date)
+        val sdf = SimpleDateFormat("MM/dd/yyyy", Locale.US)
+        val expiryDate = sdf.parse(expDate) ?: return ExpiryStatus.FRESH
+        
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val today = calendar.time
+
+        val diffMillis = expiryDate.time - today.time
+        val diffDays = diffMillis / (1000 * 60 * 60 * 24)
+
         when {
-            daysUntilExpiry < 0 -> ExpiryStatus.EXPIRED
-            daysUntilExpiry <= 3 -> ExpiryStatus.EXPIRING
+            diffDays < 0 -> ExpiryStatus.EXPIRED
+            diffDays <= 3 -> ExpiryStatus.EXPIRING
             else -> ExpiryStatus.FRESH
         }
     } catch (_: Exception) {
@@ -359,7 +370,9 @@ fun AddPantryItemDialog(
             TextButton(onClick = {
                 if (expDate.isNotBlank()) {
                     try {
-                        LocalDate.parse(expDate, DateTimeFormatter.ofPattern("MM/dd/yyyy"))
+                        val sdf = SimpleDateFormat("MM/dd/yyyy", Locale.US)
+                        sdf.isLenient = false
+                        sdf.parse(expDate)
                     } catch (_: Exception) {
                         dateError = true
                         return@TextButton

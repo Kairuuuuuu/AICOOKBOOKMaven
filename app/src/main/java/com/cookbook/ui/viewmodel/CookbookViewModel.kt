@@ -8,7 +8,6 @@ import com.cookbook.backend.BudgetService
 import com.cookbook.backend.ChangePasswordService
 import com.cookbook.backend.Chatbackend
 import com.cookbook.backend.EmailAuthenticationService
-import com.cookbook.backend.FirebaseManager
 import com.cookbook.backend.ForgotPasswordBackend
 import com.cookbook.backend.PantryBackend
 import com.cookbook.backend.ShoppingListBackend
@@ -163,14 +162,6 @@ class CookbookViewModel : ViewModel() {
 
     // --- AI Chat ---
 
-    fun sendChatMessage(message: String) {
-        _state.update { it.copy(isLoading = true, errorMessage = null) }
-        viewModelScope.launch(Dispatchers.IO) {
-            val result = AIChatBot.askChefAI(message, _state.value.currentBudget)
-            _state.update { it.copy(isLoading = false) }
-        }
-    }
-
     fun generateFromPantry(): String? {
         val prompt = Chatbackend.generatePromptFromPantry(PantryBackend.savedPantryItems)
         if (prompt == null && PantryBackend.savedPantryItems.isEmpty()) {
@@ -186,7 +177,6 @@ class CookbookViewModel : ViewModel() {
     // --- Recipe Management ---
 
     fun saveRecipeToMenu(aiResponse: ParsedResponse) {
-        val analysis = Chatbackend.analyzeRecipe(aiResponse, _state.value.currentBudget)
         Chatbackend.saveRecipeToMenu(aiResponse) { recipeName, ingredients, fullIngredients,
                                                      checked, calories, protein, totalCost ->
             val missingLabel = ShoppingListBackend.computeMissingCount(ingredients, checked)

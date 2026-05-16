@@ -133,7 +133,6 @@ fun NavGraph(viewModel: CookbookViewModel = viewModel()) {
         composable(Routes.CHAT) {
             ChatScreen(
                 viewModel = viewModel,
-                onBack = { navController.popBackStack() },
                 onNavigateToMainMenu = {
                     navController.navigate(Routes.MAIN_MENU) { popUpTo(Routes.CHAT) { inclusive = true } }
                 },
@@ -146,7 +145,6 @@ fun NavGraph(viewModel: CookbookViewModel = viewModel()) {
         composable(Routes.PANTRY) {
             PantryScreen(
                 viewModel = viewModel,
-                onBack = { navController.popBackStack() },
                 onNavigateToMainMenu = {
                     navController.navigate(Routes.MAIN_MENU) { popUpTo(Routes.PANTRY) { inclusive = true } }
                 },
