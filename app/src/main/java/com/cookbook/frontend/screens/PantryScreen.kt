@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,6 +40,7 @@ fun PantryScreen(
     val state by viewModel.state.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showSideMenu by remember { mutableStateOf(false) }
+    var showBudgetDialog by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(1) }
     var searchQuery by remember { mutableStateOf("") }
 
@@ -60,29 +62,35 @@ fun PantryScreen(
                 .background(CreamLight)
         ) {
             // Top bar
-            Row(
+            CenterAlignedTopAppBar(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .background(
                         Brush.horizontalGradient(
                             colors = listOf(GreenDark, GreenPrimary)
                         )
+                    ),
+                title = {
+                    Text(
+                        text = "Dirk's CookBook",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = White,
+                        fontWeight = FontWeight.Bold
                     )
-                    .padding(horizontal = 8.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { showSideMenu = true }) {
-                    Icon(Icons.Default.Menu, contentDescription = "Menu", tint = White)
-                }
-                Text(
-                    text = "Dirk's CookBook",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = White,
-                    fontWeight = FontWeight.Bold
+                },
+                navigationIcon = {
+                    IconButton(onClick = { showSideMenu = true }) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = White)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showBudgetDialog = true }) {
+                        Icon(Icons.Default.MonetizationOn, contentDescription = "Budget", tint = White)
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent
                 )
-                Box(modifier = Modifier.size(48.dp)) // spacer
-            }
+            )
 
             // Search bar
             OutlinedTextField(
@@ -176,6 +184,11 @@ fun PantryScreen(
                 onChangePassword = { },
                 onLogout = { }
             )
+        }
+
+        // Budget dialog
+        if (showBudgetDialog) {
+            AddBudgetDialog(viewModel = viewModel, onDismiss = { showBudgetDialog = false })
         }
     }
 

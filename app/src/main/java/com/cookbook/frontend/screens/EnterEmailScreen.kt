@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.cookbook.data.model.OTPStatus
 import com.cookbook.ui.theme.*
 import com.cookbook.ui.viewmodel.CookbookViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun EnterEmailScreen(
@@ -34,6 +35,7 @@ fun EnterEmailScreen(
     val state by viewModel.state.collectAsState()
     var email by remember { mutableStateOf("") }
     var sendingOtp by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -124,11 +126,13 @@ fun EnterEmailScreen(
 
                     Button(
                         onClick = {
-                            sendingOtp = true
-                            val result = viewModel.sendOTP(email)
-                            sendingOtp = false
-                            if (result.status == OTPStatus.SUCCESS) {
-                                onNext(email, result.sentCode)
+                            scope.launch {
+                                sendingOtp = true
+                                val result = viewModel.sendOTP(email)
+                                sendingOtp = false
+                                if (result.status == OTPStatus.SUCCESS) {
+                                    onNext(email, result.sentCode)
+                                }
                             }
                         },
                         modifier = Modifier

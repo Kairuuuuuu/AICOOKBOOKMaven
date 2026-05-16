@@ -40,7 +40,7 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(state.userEmail) {
+    LaunchedEffect(state.userEmail, state.firstName) {
         if (state.userEmail.isNotBlank() && state.firstName != "Guest") {
             onLoginSuccess()
         }

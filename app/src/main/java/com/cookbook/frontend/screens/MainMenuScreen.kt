@@ -63,26 +63,29 @@ fun MainMenuScreen(
 
         Column(modifier = Modifier.fillMaxSize()) {
             // Top bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { showSideMenu = true }) {
-                    Icon(Icons.Default.Menu, contentDescription = "Menu", tint = White)
-                }
-                Text(
-                    text = "Dirk's CookBook",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = White,
-                    fontWeight = FontWeight.Bold
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = "Dirk's CookBook",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { showSideMenu = true }) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = White)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showBudgetDialog = true }) {
+                        Icon(Icons.Default.MonetizationOn, contentDescription = "Budget", tint = White)
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent
                 )
-                IconButton(onClick = { showBudgetDialog = true }) {
-                    Icon(Icons.Default.MonetizationOn, contentDescription = "Budget", tint = White)
-                }
-            }
+            )
 
             // Main Content
             Column(

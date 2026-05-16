@@ -126,31 +126,35 @@ fun ChatScreen(
                 .background(CreamLight)
         ) {
             // Top bar
-            Row(
+            CenterAlignedTopAppBar(
                 modifier = Modifier
-                    .fillMaxWidth()
                     .background(
                         androidx.compose.ui.graphics.Brush.horizontalGradient(
                             colors = listOf(GreenDark, GreenPrimary)
                         )
+                    ),
+                title = {
+                    Text(
+                        text = "Dirk's CookBook",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = White,
+                        fontWeight = FontWeight.Bold
                     )
-                    .padding(horizontal = 8.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { showSideMenu = true }) {
-                    Icon(Icons.Default.Menu, contentDescription = "Menu", tint = White)
-                }
-                Text(
-                    text = "Dirk's CookBook",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = White,
-                    fontWeight = FontWeight.Bold
+                },
+                navigationIcon = {
+                    IconButton(onClick = { showSideMenu = true }) {
+                        Icon(Icons.Default.Menu, contentDescription = "Menu", tint = White)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showBudgetDialog = true }) {
+                        Icon(Icons.Default.MonetizationOn, contentDescription = "Budget", tint = White)
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent
                 )
-                IconButton(onClick = { showBudgetDialog = true }) {
-                    Icon(Icons.Default.MonetizationOn, contentDescription = "Budget", tint = White)
-                }
-            }
+            )
 
             // Chat history
             LazyColumn(

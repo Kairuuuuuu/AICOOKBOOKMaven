@@ -116,16 +116,18 @@ class CookbookViewModel : ViewModel() {
 
     // --- Email / OTP ---
 
-    fun sendOTP(email: String): OTPResult {
-        val result = EmailAuthenticationService.processEmailForOTP(email)
-        if (result.status == OTPStatus.SUCCESS) {
-            _state.update { it.copy(userEmail = email, errorMessage = null) }
-        } else if (result.status == OTPStatus.INVALID_EMAIL) {
-            _state.update { it.copy(errorMessage = "Please enter a valid email address.") }
-        } else {
-            _state.update { it.copy(errorMessage = "Failed to send code. Check your connection.") }
+    suspend fun sendOTP(email: String): OTPResult {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val result = EmailAuthenticationService.processEmailForOTP(email)
+            if (result.status == OTPStatus.SUCCESS) {
+                _state.update { it.copy(userEmail = email, errorMessage = null) }
+            } else if (result.status == OTPStatus.INVALID_EMAIL) {
+                _state.update { it.copy(errorMessage = "Please enter a valid email address.") }
+            } else {
+                _state.update { it.copy(errorMessage = "Failed to send code. Check your connection.") }
+            }
+            result
         }
-        return result
     }
 
     // --- Budget ---
