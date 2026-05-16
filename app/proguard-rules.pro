@@ -1,0 +1,3 @@
+-keepclassmembers class com.cookbook.BuildConfig { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
