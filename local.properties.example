@@ -1,0 +1,8 @@
+# API Keys for AI-CookBook Android
+# These are read by the Gradle build system (buildConfigField)
+# Rename this file to local.properties and fill in the values
+# DO NOT commit local.properties to version control
+
+GROQ_API_KEY=YOUR_GROQ_API_KEY_HERE
+FIREBASE_API_KEY=YOUR_FIREBASE_API_KEY_HERE
+EMAIL_PASSWORD=YOUR_GMAIL_APP_PASSWORD_HERE
